@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Brown Soil Mound -->
+    <path
+        android:fillColor="#9E6C3B"
+        android:strokeColor="#4A2E11"
+        android:strokeWidth="1.2"
+        android:pathData="M-5,110 L-5,82 C20,74 88,74 113,82 L113,110 Z" />
+
+    <!-- Soil Specks / Texture -->
+    <path
+        android:fillColor="#6A4420"
+        android:pathData="M15,88a1.5,1.5 0,1,0 3,0a1.5,1.5 0,1,0 -3,0 M30,94a1.2,1.2 0,1,0 2.4,0a1.2,1.2 0,1,0 -2.4,0 M45,86a1.5,1.5 0,1,0 3,0a1.5,1.5 0,1,0 -3,0 M60,92a1.2,1.2 0,1,0 2.4,0a1.2,1.2 0,1,0 -2.4,0 M75,85a1.5,1.5 0,1,0 3,0a1.5,1.5 0,1,0 -3,0 M90,91a1.2,1.2 0,1,0 2.4,0a1.2,1.2 0,1,0 -2.4,0 M22,98a1.2,1.2 0,1,0 2.4,0a1.2,1.2 0,1,0 -2.4,0 M52,97a1.5,1.5 0,1,0 3,0a1.5,1.5 0,1,0 -3,0 M82,98a1.2,1.2 0,1,0 2.4,0a1.2,1.2 0,1,0 -2.4,0" />
+
+    <!-- Sprout Brown Stem -->
+    <path
+        android:strokeColor="#4E342E"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,81 C52.5,70 53,60 54,52" />
+
+    <!-- Sprout Left Leaf -->
+    <path
+        android:fillColor="#589A27"
+        android:strokeColor="#2E520A"
+        android:strokeWidth="1.2"
+        android:pathData="M54,53 C46,42 33,48 39,58 C45,63 52,56 54,53 Z" />
+
+    <!-- Sprout Left Leaf Shine Highlight -->
+    <path
+        android:fillColor="#B2E057"
+        android:pathData="M44,48 C41,49 40,52 43,53 C46,52 47,49 44,48 Z" />
+
+    <!-- Sprout Right Leaf -->
+    <path
+        android:fillColor="#589A27"
+        android:strokeColor="#2E520A"
+        android:strokeWidth="1.2"
+        android:pathData="M54,53 C62,42 75,48 69,58 C63,63 56,56 54,53 Z" />
+
+    <!-- Sprout Right Leaf Shine Highlight -->
+    <path
+        android:fillColor="#B2E057"
+        android:pathData="M64,48 C67,49 68,52 65,53 C62,52 61,49 64,48 Z" />
+
+</vector>

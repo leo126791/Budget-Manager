@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:scaleX="1.15"
+        android:scaleY="1.15"
+        android:pivotX="54"
+        android:pivotY="54">
+
+        <!-- Motion Lines above Coin -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:pathData="M52,16 v7 M57,12 v10 M62,16 v7" />
+
+        <!-- Falling Bitcoin Coin -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:fillColor="#00000000"
+            android:pathData="M57,33 m-8.5,0 a8.5,8.5 0 1,1 17,0 a8.5,8.5 0 1,1 -17,0" />
+
+        <!-- Bitcoin 'B' Inside Coin -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="1.8"
+            android:strokeLineCap="round"
+            android:pathData="M54,29 v8 M58,29 v8 M53,30.5 h4.5 c1.5,0 2.5,0.8 2.5,2 s-1,2 -2.5,2 h-4.5 M53,34.5 h5 c1.5,0 2.8,0.8 2.8,2 s-1.3,2 -2.8,2 h-5" />
+
+        <!-- Pig Snout -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:fillColor="#00000000"
+            android:pathData="M28,57 m-6.5,0 a6.5,5 0 1,1 13,0 a6.5,5 0 1,1 -13,0" />
+
+        <!-- Nostrils -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M25.5,57 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0 M29.5,57 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+
+        <!-- Eye / Smile -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M35,52 c1.2,-1.8 2.8,-1.8 4,0" />
+
+        <!-- Ear -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:fillColor="#00000000"
+            android:pathData="M42,48 C39,42 32,44 33,50" />
+
+        <!-- Main Body Contour -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M28,52.5 C29,45 38,45 44,47.5 C52,44 65,44 75,49 C83,53 81,68 73,73 C65,77 50,77 39,73.5 C32,71 27,65 28,57.5" />
+
+        <!-- Slot Line on Pig Back -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:pathData="M51,46.5 h11" />
+
+        <!-- Dollar Sign ($) on Belly -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M58,54 v16 M55,56 h5 c1.5,0 2.5,1 2.5,2 s-1,2 -2.5,2 h-4 c-1.5,0 -2.5,1 -2.5,2 s1,2 2.5,2 h5" />
+
+        <!-- Curlicue Tail -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M77,56 c4,-2 6,2 3,5 c-2,2 -4,-1 -2,-3" />
+
+        <!-- Legs -->
+        <path
+            android:strokeColor="#000000"
+            android:strokeWidth="2.2"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M43,74.5 v5 c0,2.5 3.5,2.5 3.5,0 v-5 M48.5,74.5 v3 c0,2.5 3.5,2.5 3.5,0 v-3 M62,74.5 v5 c0,2.5 3.5,2.5 3.5,0 v-5 M67.5,74.5 v3 c0,2.5 3.5,2.5 3.5,0 v-3" />
+
+    </group>
+</vector>
