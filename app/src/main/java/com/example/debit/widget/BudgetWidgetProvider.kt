@@ -15,7 +15,9 @@ import android.widget.RemoteViews
 import com.example.debit.MainActivity
 import com.example.debit.R
 import com.example.debit.data.AppDatabase
+import com.example.debit.data.SettingsPreferences
 import com.example.debit.data.TransactionType
+import com.example.debit.data.primaryColorInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -40,6 +42,9 @@ class BudgetWidgetProvider : AppWidgetProvider() {
             val componentName = ComponentName(context, BudgetWidgetProvider::class.java)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
             updateWidgets(context, appWidgetManager, appWidgetIds)
+
+            // Sync QuickAddWidget theme color
+            QuickAddWidgetProvider.updateAllWidgets(context)
         }
 
         private fun updateWidgets(
@@ -49,6 +54,8 @@ class BudgetWidgetProvider : AppWidgetProvider() {
         ) {
             CoroutineScope(Dispatchers.IO).launch {
                 val db = AppDatabase.getDatabase(context)
+                val prefs = SettingsPreferences(context)
+                val themeColor = prefs.getThemeColor()
                 val currentYM = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
 
                 val transactions = db.transactionDao().getAllTransactions().first()
@@ -68,13 +75,18 @@ class BudgetWidgetProvider : AppWidgetProvider() {
                 val remaining = if (totalBudget > 0) maxOf(0.0, totalBudget - totalExpense) else 0.0
                 val percent = if (totalBudget > 0) ((totalExpense / totalBudget) * 100).toInt() else 0
 
-                val chartBitmap = drawDonutChartBitmap(totalExpense, totalBudget)
+                val chartBitmap = drawDonutChartBitmap(
+                    spent = totalExpense,
+                    limit = totalBudget,
+                    primaryColor = themeColor.primaryColorInt
+                )
 
                 for (appWidgetId in appWidgetIds) {
                     val views = RemoteViews(context.packageName, R.layout.widget_budget_chart)
 
                     views.setImageViewBitmap(R.id.widget_chart_image, chartBitmap)
                     views.setTextViewText(R.id.widget_percent_text, "$percent%")
+                    views.setTextColor(R.id.widget_percent_text, themeColor.primaryColorInt)
                     views.setTextViewText(
                         R.id.widget_spent_text,
                         "$${String.format(Locale.getDefault(), "%,.0f", totalExpense)} / $${String.format(Locale.getDefault(), "%,.0f", totalBudget)}"
@@ -98,10 +110,15 @@ class BudgetWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun drawDonutChartBitmap(spent: Double, limit: Double, sizePx: Int = 240): Bitmap {
+        private fun drawDonutChartBitmap(
+            spent: Double,
+            limit: Double,
+            primaryColor: Int,
+            sizePx: Int = 180
+        ): Bitmap {
             val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
-            val strokeWidth = sizePx * 0.28f
+            val strokeWidth = sizePx * 0.22f
 
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
@@ -112,7 +129,7 @@ class BudgetWidgetProvider : AppWidgetProvider() {
             val rect = RectF(margin, margin, sizePx - margin, sizePx - margin)
 
             // Track background
-            paint.color = Color.parseColor("#E0E0E0")
+            paint.color = Color.parseColor("#E5E7EB")
             canvas.drawArc(rect, -90f, 360f, false, paint)
 
             // Expense slice
@@ -120,9 +137,9 @@ class BudgetWidgetProvider : AppWidgetProvider() {
             val sweepAngle = ((spent / baseAmount) * 360f).coerceAtMost(360.0).toFloat()
 
             paint.color = when {
-                spent > limit && limit > 0 -> Color.parseColor("#E53935") // Red
-                spent >= limit * 0.8 && limit > 0 -> Color.parseColor("#FF9800") // Orange
-                else -> Color.parseColor("#2196F3") // Blue
+                spent > limit && limit > 0 -> Color.parseColor("#EF4444") // Red
+                spent >= limit * 0.8 && limit > 0 -> Color.parseColor("#F59E0B") // Amber
+                else -> primaryColor
             }
 
             if (sweepAngle > 0) {

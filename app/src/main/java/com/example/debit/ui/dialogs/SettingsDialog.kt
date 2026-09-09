@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
 import com.example.debit.ui.utils.AppStrings
+import com.example.debit.ui.utils.bouncyClickable
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,15 +65,29 @@ fun SettingsDialog(
     currentThemeColor: AppThemeColor,
     currentLanguage: AppLanguage,
     currentBetaTestingEnabled: Boolean,
-    currentLocationPredictionEnabled: Boolean,
-    currentAutoBackupEnabled: Boolean,
+    currentLivingExpensePoolEnabled: Boolean = false,
+    currentIncomeTrackingEnabled: Boolean = true,
+    currentSearchEnabled: Boolean = true,
+    currentSubscriptionEnabled: Boolean = true,
+    currentMultiAccountEnabled: Boolean = true,
+    currentSavingsGoalsEnabled: Boolean = true,
+    currentModern3DUiEnabled: Boolean = true,
+    currentDragDateReorderEnabled: Boolean = true,
+    currentAutoBackupEnabled: Boolean = true,
     lastAutoBackupTime: Long,
     onSaveSettings: (
         budgetLimit: Double,
         themeColor: AppThemeColor,
         language: AppLanguage,
         betaTestingEnabled: Boolean,
-        locationPredictionEnabled: Boolean,
+        livingExpensePoolEnabled: Boolean,
+        incomeTrackingEnabled: Boolean,
+        searchEnabled: Boolean,
+        subscriptionEnabled: Boolean,
+        multiAccountEnabled: Boolean,
+        savingsGoalsEnabled: Boolean,
+        modern3DUiEnabled: Boolean,
+        dragDateReorderEnabled: Boolean,
         autoBackupEnabled: Boolean
     ) -> Unit,
     onExportReport: () -> Unit,
@@ -86,7 +101,14 @@ fun SettingsDialog(
     var selectedColor by remember { mutableStateOf(currentThemeColor) }
     var selectedLanguage by remember { mutableStateOf(currentLanguage) }
     var betaTestingState by remember { mutableStateOf(currentBetaTestingEnabled) }
-    var locationPredictionState by remember { mutableStateOf(currentLocationPredictionEnabled) }
+    var livingExpensePoolState by remember { mutableStateOf(currentLivingExpensePoolEnabled) }
+    var incomeTrackingState by remember { mutableStateOf(currentIncomeTrackingEnabled) }
+    var searchState by remember { mutableStateOf(currentSearchEnabled) }
+    var subscriptionState by remember { mutableStateOf(currentSubscriptionEnabled) }
+    var multiAccountState by remember { mutableStateOf(currentMultiAccountEnabled) }
+    var savingsGoalsState by remember { mutableStateOf(currentSavingsGoalsEnabled) }
+    var modern3DUiState by remember { mutableStateOf(currentModern3DUiEnabled) }
+    var dragDateReorderState by remember { mutableStateOf(currentDragDateReorderEnabled) }
     var autoBackupState by remember { mutableStateOf(currentAutoBackupEnabled) }
 
     val isZh = selectedLanguage == AppLanguage.ZH
@@ -113,7 +135,7 @@ fun SettingsDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 450.dp)
+                    .heightIn(max = 460.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -155,7 +177,7 @@ fun SettingsDialog(
                                 shape = RoundedCornerShape(12.dp),
                                 color = if (isColorSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                                 modifier = Modifier
-                                    .clickable { selectedColor = themeColor }
+                                    .bouncyClickable { selectedColor = themeColor }
                                     .border(
                                         width = if (isColorSelected) 2.dp else 1.dp,
                                         color = if (isColorSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
@@ -234,7 +256,7 @@ fun SettingsDialog(
                             onCheckedChange = {
                                 betaTestingState = it
                                 if (!it) {
-                                    locationPredictionState = false
+                                    livingExpensePoolState = false
                                 }
                             }
                         )
@@ -250,8 +272,9 @@ fun SettingsDialog(
                         ) {
                             Column(
                                 modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
+                                // 1. Living Expense Pool
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -259,20 +282,211 @@ fun SettingsDialog(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = if (isZh) "📍 智慧地點預算推測 (Beta)" else "📍 Location Spending Prediction (Beta)",
+                                            text = if (isZh) "動態生活費預算池" else "Living Expense Pool",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = if (isZh) "記錄消費地點並智慧推測下次造訪預估開銷" else "Record location and estimate next visit spending",
+                                            text = if (isZh) "累積過去天數未花完預算" else "Rollover past unspent daily budget",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Switch(
-                                        checked = locationPredictionState,
-                                        onCheckedChange = { locationPredictionState = it }
+                                        checked = livingExpensePoolState,
+                                        onCheckedChange = { livingExpensePoolState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                // 2. Income Tracking
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "收入記帳與收支概覽" else "Income & Net Savings",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "記錄薪水/獎金與月度收支平衡" else "Track income & monthly net savings",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = incomeTrackingState,
+                                        onCheckedChange = { incomeTrackingState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                // 3. Search Feature
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "關鍵字搜尋" else "Keyword Search",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "搜尋消費備註、類別" else "Search notes, locations & categories",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = searchState,
+                                        onCheckedChange = { searchState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                // 4. Subscriptions Tracker
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "訂閱與定期扣款" else "Subscriptions Tracker",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "固定扣款與月度訂閱" else "Track fixed bills & subscriptions",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = subscriptionState,
+                                        onCheckedChange = { subscriptionState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                // 5. Multi Account
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "多帳戶與支付方式" else "Accounts & Payment Methods",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "區分現金、信用卡、LINE Pay等" else "Tag Cash, Credit Card, Line Pay",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = multiAccountState,
+                                        onCheckedChange = { multiAccountState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                HorizontalDivider()
+
+                                // 7. Savings Goals
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "儲蓄目標" else "Savings Goals",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "旅遊/購物存錢進度" else "Track wishlist & savings progress",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = savingsGoalsState,
+                                        onCheckedChange = { savingsGoalsState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                // 8. Modern 3D Hand-Drawn UI
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "測試版 UI" else "beta UI",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "目前空空" else "none",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = modern3DUiState,
+                                        onCheckedChange = { modern3DUiState = it }
+                                    )
+                                }
+
+                                HorizontalDivider()
+
+                                // 9. Drag Date Reorder
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (isZh) "長按移動紀錄" else "Move Date on Long Press",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (isZh) "長按記帳紀錄快速將開銷移至其他日期" else "Long press a record to shift its date",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Switch(
+                                        checked = dragDateReorderState,
+                                        onCheckedChange = { dragDateReorderState = it }
                                     )
                                 }
                             }
@@ -290,7 +504,7 @@ fun SettingsDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isZh) "智慧自動備份 (Auto-Backup)" else "Auto-Backup",
+                            text = if (isZh) "自動備份" else "Auto-Backup",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -413,13 +627,13 @@ fun SettingsDialog(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = "Budget Manager v1.0.0",
+                        text = "Budget Manager v1.0.2",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = if (isZh) "版本 1.0.0 • 記帳與預算管家" else "Version 1.0.0 • Smart Budget Tracker",
+                        text = if (isZh) "版本 1.0.2 • 記帳與預算管家" else "Version 1.0.2 • Smart Budget Tracker",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.outline
@@ -431,19 +645,26 @@ fun SettingsDialog(
             TextButton(
                 onClick = {
                     val limit = budgetInput.toDoubleOrNull() ?: 0.0
-                    val effectiveLocationPrediction = betaTestingState && locationPredictionState
+                    val effectivePool = betaTestingState && livingExpensePoolState
                     onSaveSettings(
                         limit,
                         selectedColor,
                         selectedLanguage,
                         betaTestingState,
-                        effectiveLocationPrediction,
+                        effectivePool,
+                        incomeTrackingState,
+                        searchState,
+                        subscriptionState,
+                        multiAccountState,
+                        savingsGoalsState,
+                        modern3DUiState,
+                        dragDateReorderState,
                         autoBackupState
                     )
                     onDismissRequest()
                 }
             ) {
-                Text(AppStrings.get("save", selectedLanguage))
+                Text(AppStrings.get("save", selectedLanguage), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

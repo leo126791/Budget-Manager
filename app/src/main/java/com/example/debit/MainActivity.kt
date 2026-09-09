@@ -16,6 +16,7 @@ import com.example.debit.data.DebitRepository
 import com.example.debit.ui.DebitViewModel
 import com.example.debit.ui.DebitViewModelFactory
 import com.example.debit.ui.screens.DashboardScreen
+import com.example.debit.ui.screens.OnboardingScreen
 import com.example.debit.ui.theme.DebitTheme
 import com.example.debit.ui.utils.requestHighRefreshRate
 
@@ -26,7 +27,12 @@ class MainActivity : ComponentActivity() {
         requestHighRefreshRate(this)
 
         val database = AppDatabase.getDatabase(applicationContext)
-        val repository = DebitRepository(database.transactionDao(), database.budgetDao())
+        val repository = DebitRepository(
+            database.transactionDao(),
+            database.budgetDao(),
+            database.subscriptionDao(),
+            database.savingsGoalDao()
+        )
         val viewModelFactory = DebitViewModelFactory(application, repository)
 
         setContent {
@@ -38,7 +44,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    DashboardScreen(viewModel = viewModel)
+                    if (!uiState.isInitialized) {
+                        OnboardingScreen(viewModel = viewModel)
+                    } else {
+                        DashboardScreen(viewModel = viewModel)
+                    }
                 }
             }
         }

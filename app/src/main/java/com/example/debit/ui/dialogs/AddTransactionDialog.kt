@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.MyLocation
@@ -41,6 +42,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +56,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.Transaction
+import com.example.debit.data.TransactionType
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import com.example.debit.ui.utils.AppStrings
 import com.example.debit.ui.utils.GpsLocationUtils
 import com.example.debit.ui.utils.getCategoryIcon
@@ -62,8 +68,20 @@ import java.util.Date
 import java.util.Locale
 
 val defaultExpenseCategories = listOf("餐飲", "日常", "娛樂", "購物", "交通", "醫療", "居住", "其他")
-val foodSubCategories = listOf("早餐", "午餐", "晚餐", "宵夜", "點心飲料")
-val dailySubCategories = listOf("洗衣", "烘衣", "日用品")
+val defaultIncomeCategories = listOf("薪水", "兼職", "獎金", "投資", "零用錢", "其他收入")
+val defaultAccounts = listOf("現金", "信用卡", "銀行帳戶", "電子支付")
+
+val defaultSubCategoriesMap = mapOf(
+    "餐飲" to listOf("早餐", "午餐", "晚餐", "宵夜", "點心飲料"),
+    "日常" to listOf("電費", "洗衣", "烘衣", "日用品"),
+    "娛樂" to listOf("電影", "遊戲", "KTV", "景點門票"),
+    "購物" to listOf("服飾", "鞋包", "3C數碼", "美妝保養"),
+    "交通" to listOf("捷運/公車", "加油", "計程車", "停車費"),
+    "醫療" to listOf("掛號費", "藥品", "保健品", "健檢"),
+    "居住" to listOf("房租", "水費", "瓦斯費", "管理費", "寬頻網路"),
+    "其他" to listOf("雜項", "禮物", "捐款")
+)
+
 val defaultLocations = listOf("7-11", "全家", "麥當勞", "星巴克", "全聯", "加油站")
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -71,14 +89,28 @@ val defaultLocations = listOf("7-11", "全家", "麥當勞", "星巴克", "全�
 fun AddTransactionDialog(
     initialTransaction: Transaction? = null,
     language: AppLanguage = AppLanguage.ZH,
-    locationPredictionEnabled: Boolean = true,
+    isLivingExpensePoolEnabled: Boolean = false,
+    livingExpensePoolAmount: Double = 0.0,
+    isIncomeTrackingEnabled: Boolean = true,
+    isMultiAccountEnabled: Boolean = true,
+    locationPredictionEnabled: Boolean = false,
     recentLocations: List<String> = emptyList(),
+    onGetCustomSubCategories: (String) -> List<String> = { emptyList() },
+    onAddCustomSubCategory: (String, String) -> Unit = { _, _ -> },
     onGetLocationEstimate: (String) -> Pair<Double, Int> = { Pair(0.0, 0) },
     onDismissRequest: () -> Unit,
-    onConfirm: (amount: Double, category: String, note: String, date: Long, locationName: String) -> Unit
+    onConfirm: (amount: Double, category: String, note: String, date: Long, locationName: String, deductFromPool: Boolean, accountName: String, type: TransactionType) -> Unit
 ) {
     val context = LocalContext.current
     val isZh = language == AppLanguage.ZH
+
+    var transactionType by remember {
+        mutableStateOf(initialTransaction?.type ?: TransactionType.EXPENSE)
+    }
+    var accountName by remember {
+        mutableStateOf(initialTransaction?.accountName ?: "現金")
+    }
+    var deductFromPool by remember { mutableStateOf(initialTransaction?.deductFromPool ?: false) }
 
     var amountText by remember {
         mutableStateOf(
@@ -90,15 +122,19 @@ fun AddTransactionDialog(
     var category by remember {
         mutableStateOf(initialTransaction?.category ?: defaultExpenseCategories.first())
     }
-    var selectedMealTime by remember {
+    var selectedSubCategory by remember {
         mutableStateOf<String?>(
-            foodSubCategories.find { initialTransaction?.note?.contains(it) == true }
+            initialTransaction?.note?.split(" • ")?.firstOrNull()
         )
     }
-    var selectedDailySub by remember {
-        mutableStateOf<String?>(
-            dailySubCategories.find { initialTransaction?.note?.contains(it) == true }
-        )
+    var showAddSubDialog by remember { mutableStateOf(false) }
+    var customSubInput by remember { mutableStateOf("") }
+    var customSubVersion by remember { mutableIntStateOf(0) }
+
+    val defaultSubs = defaultSubCategoriesMap[category] ?: emptyList()
+    val currentSubs = remember(category, customSubVersion) {
+        val custom = onGetCustomSubCategories(category)
+        (defaultSubs + custom).distinct()
     }
     var locationName by remember {
         mutableStateOf(initialTransaction?.locationName ?: "")
@@ -303,14 +339,67 @@ fun AddTransactionDialog(
                     }
                 }
 
+                // Transaction Type Segmented Button
+                if (isIncomeTrackingEnabled) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = transactionType == TransactionType.EXPENSE,
+                            onClick = {
+                                transactionType = TransactionType.EXPENSE
+                                category = defaultExpenseCategories.first()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Text(if (isZh) "💸 支出" else "Expense")
+                        }
+                        SegmentedButton(
+                            selected = transactionType == TransactionType.INCOME,
+                            onClick = {
+                                transactionType = TransactionType.INCOME
+                                category = defaultIncomeCategories.first()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Text(if (isZh) "💵 收入" else "Income")
+                        }
+                    }
+                }
+
+                // Multi Account Selection
+                if (isMultiAccountEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(if (isZh) "支付 / 存入帳戶" else "Account", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            defaultAccounts.forEach { acc ->
+                                val iconStr = when (acc) {
+                                    "現金" -> "💵 "
+                                    "信用卡" -> "💳 "
+                                    "銀行帳戶" -> "🏦 "
+                                    else -> "📱 "
+                                }
+                                FilterChip(
+                                    selected = accountName == acc,
+                                    onClick = { accountName = acc },
+                                    label = { Text(iconStr + acc) }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Category Selection Chips
+                val currentCategories = if (transactionType == TransactionType.INCOME) defaultIncomeCategories else defaultExpenseCategories
                 Text(AppStrings.get("select_category", language), style = MaterialTheme.typography.labelMedium)
+
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    defaultExpenseCategories.forEach { cat ->
+                    currentCategories.forEach { cat ->
                         val catLabel = AppStrings.getCategoryName(cat, language)
                         FilterChip(
                             selected = category == cat,
@@ -327,52 +416,32 @@ fun AddTransactionDialog(
                     }
                 }
 
-                // Sub-category Selection for Dining ("餐飲")
-                if (category == "餐飲") {
-                    Text(AppStrings.get("meal_time", language), style = MaterialTheme.typography.labelMedium)
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        foodSubCategories.forEach { meal ->
-                            val mealLabel = AppStrings.getSubCategoryName(meal, language)
-                            FilterChip(
-                                selected = selectedMealTime == meal,
-                                onClick = {
-                                    selectedMealTime = if (selectedMealTime == meal) null else meal
-                                },
-                                label = { Text(mealLabel) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            )
-                        }
-                    }
-                }
+                // Sub-category Selection for ALL Categories
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = if (isZh) "選擇「$category」細項" else "Subcategory for $category",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                // Sub-category Selection for Daily ("日常")
-                if (category == "日常") {
-                    Text(AppStrings.get("daily_sub", language), style = MaterialTheme.typography.labelMedium)
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        dailySubCategories.forEach { sub ->
+                        currentSubs.forEach { sub ->
                             val chipLabel = when (sub) {
                                 "洗衣" -> AppStrings.get("laundry_chip", language)
                                 "烘衣" -> AppStrings.get("dryer_chip", language)
                                 else -> AppStrings.getSubCategoryName(sub, language)
                             }
                             FilterChip(
-                                selected = selectedDailySub == sub,
+                                selected = selectedSubCategory == sub,
                                 onClick = {
-                                    if (selectedDailySub == sub) {
-                                        selectedDailySub = null
+                                    if (selectedSubCategory == sub) {
+                                        selectedSubCategory = null
                                     } else {
-                                        selectedDailySub = sub
+                                        selectedSubCategory = sub
                                         if (sub == "洗衣" || sub == "烘衣") {
                                             amountText = "20"
                                             amountError = false
@@ -381,8 +450,68 @@ fun AddTransactionDialog(
                                 },
                                 label = { Text(chipLabel) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            )
+                        }
+
+                        // ➕ Add Custom Subcategory Chip
+                        FilterChip(
+                            selected = false,
+                            onClick = { showAddSubDialog = true },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "新增細項",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(if (isZh) "新增" else "Add")
+                                }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    }
+                }
+
+                // Budget Source Selection for Living Expense Pool
+                if (isLivingExpensePoolEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (isZh) "扣款預算來源" else "Deduct From Budget",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val poolFormatted = if (livingExpensePoolAmount < 0)
+                                "-$${String.format(Locale.getDefault(), "%,.0f", -livingExpensePoolAmount)}"
+                            else
+                                "$${String.format(Locale.getDefault(), "%,.0f", livingExpensePoolAmount)}"
+                            FilterChip(
+                                selected = !deductFromPool,
+                                onClick = { deductFromPool = false },
+                                label = {
+                                    Text(if (isZh) "🏢 本月預算" else "Monthly Budget", fontSize = 12.sp)
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = deductFromPool,
+                                onClick = { deductFromPool = true },
+                                label = {
+                                    Text(if (isZh) "💰 生活費池 ($poolFormatted)" else "Pool ($poolFormatted)", fontSize = 12.sp)
+                                },
+                                modifier = Modifier.weight(1.1f),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = if (livingExpensePoolAmount < 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = if (livingExpensePoolAmount < 0) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             )
                         }
@@ -407,16 +536,12 @@ fun AddTransactionDialog(
                         amountError = true
                     } else {
                         var finalNote = note.trim()
-                        if (category == "餐飲" && selectedMealTime != null) {
-                            if (!finalNote.contains(selectedMealTime!!)) {
-                                finalNote = if (finalNote.isBlank()) selectedMealTime!! else "${selectedMealTime!!} • $finalNote"
-                            }
-                        } else if (category == "日常" && selectedDailySub != null) {
-                            if (!finalNote.contains(selectedDailySub!!)) {
-                                finalNote = if (finalNote.isBlank()) selectedDailySub!! else "${selectedDailySub!!} • $finalNote"
+                        if (selectedSubCategory != null) {
+                            if (!finalNote.contains(selectedSubCategory!!)) {
+                                finalNote = if (finalNote.isBlank()) selectedSubCategory!! else "${selectedSubCategory!!} • $finalNote"
                             }
                         }
-                        onConfirm(amount, category, finalNote, selectedDateMillis, locationName.trim())
+                        onConfirm(amount, category, finalNote, selectedDateMillis, locationName.trim(), deductFromPool, accountName, transactionType)
                         onDismissRequest()
                     }
                 }
@@ -453,5 +578,44 @@ fun AddTransactionDialog(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    if (showAddSubDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddSubDialog = false },
+            title = {
+                Text(if (isZh) "新增「$category」次細項" else "Add $category Subcategory")
+            },
+            text = {
+                OutlinedTextField(
+                    value = customSubInput,
+                    onValueChange = { customSubInput = it },
+                    label = { Text(if (isZh) "細項名稱 (如: 外送, 健身房...)" else "Subcategory Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val trimmed = customSubInput.trim()
+                        if (trimmed.isNotBlank()) {
+                            onAddCustomSubCategory(category, trimmed)
+                            selectedSubCategory = trimmed
+                            customSubVersion++
+                            customSubInput = ""
+                            showAddSubDialog = false
+                        }
+                    }
+                ) {
+                    Text(AppStrings.get("confirm", language))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddSubDialog = false }) {
+                    Text(AppStrings.get("cancel", language))
+                }
+            }
+        )
     }
 }

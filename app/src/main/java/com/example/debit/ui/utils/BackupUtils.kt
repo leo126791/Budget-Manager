@@ -30,6 +30,7 @@ object BackupUtils {
             obj.put("date", tx.date)
             obj.put("note", tx.note)
             obj.put("locationName", tx.locationName)
+            obj.put("deductFromPool", tx.deductFromPool)
             txArray.put(obj)
         }
         root.put("transactions", txArray)
@@ -63,6 +64,7 @@ object BackupUtils {
                 val date = obj.optLong("date", System.currentTimeMillis())
                 val note = obj.optString("note", "")
                 val locationName = obj.optString("locationName", "")
+                val deductFromPool = obj.optBoolean("deductFromPool", false)
 
                 txList.add(
                     Transaction(
@@ -71,7 +73,8 @@ object BackupUtils {
                         type = type,
                         date = date,
                         note = note,
-                        locationName = locationName
+                        locationName = locationName,
+                        deductFromPool = deductFromPool
                     )
                 )
             }
@@ -108,13 +111,21 @@ object BackupUtils {
             val backupDir = File(context.filesDir, "auto_backups")
             if (!backupDir.exists()) backupDir.mkdirs()
 
-            val backupFile = File(backupDir, "auto_backup_latest.json")
-            backupFile.writeText(jsonContent, Charsets.UTF_8)
+            val latestFile = File(backupDir, "auto_backup_latest.json")
+            val prevFile = File(backupDir, "auto_backup_prev.json")
+
+            if (latestFile.exists()) {
+                latestFile.copyTo(prevFile, overwrite = true)
+            }
+
+            val tempFile = File(backupDir, "auto_backup_latest.tmp")
+            tempFile.writeText(jsonContent, Charsets.UTF_8)
+            tempFile.renameTo(latestFile)
 
             val prefs = SettingsPreferences(context)
             prefs.setLastAutoBackupTime(System.currentTimeMillis())
 
-            backupFile
+            latestFile
         } catch (_: Exception) {
             null
         }

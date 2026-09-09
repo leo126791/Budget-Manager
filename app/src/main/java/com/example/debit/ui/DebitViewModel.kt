@@ -9,11 +9,15 @@ import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
 import com.example.debit.data.Budget
 import com.example.debit.data.DebitRepository
+import com.example.debit.data.SavingsGoal
 import com.example.debit.data.SettingsPreferences
+import com.example.debit.data.Subscription
 import com.example.debit.data.Transaction
 import com.example.debit.data.TransactionType
 import com.example.debit.ui.utils.BackupUtils
+import com.example.debit.ui.utils.DateFormatUtils
 import com.example.debit.widget.BudgetWidgetProvider
+import com.example.debit.widget.QuickAddWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,25 +27,55 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
+private data class DataTuple(
+    val transactions: List<Transaction>,
+    val globalBudget: Budget?,
+    val subscriptions: List<Subscription>,
+    val savingsGoals: List<SavingsGoal>
+)
+
+private data class PrefsTuple(
+    val selectedYM: String,
+    val themeColor: AppThemeColor,
+    val language: AppLanguage,
+    val searchQuery: String
+)
 
 data class DebitUiState(
     val currentYearMonth: String = "",
     val availableMonths: List<String> = emptyList(),
     val isCurrentMonth: Boolean = true,
     val transactions: List<Transaction> = emptyList(),
+    val filteredTransactions: List<Transaction> = emptyList(),
     val totalExpense: Double = 0.0,
+    val totalIncome: Double = 0.0,
+    val netSavings: Double = 0.0,
     val todayExpense: Double = 0.0,
     val totalBudgetLimit: Double = 0.0,
     val categoryExpenses: Map<String, Double> = emptyMap(),
     val themeColor: AppThemeColor = AppThemeColor.INDIGO,
     val appLanguage: AppLanguage = AppLanguage.ZH,
+    val searchQuery: String = "",
+    val subscriptions: List<Subscription> = emptyList(),
+    val totalSubscriptionsMonthly: Double = 0.0,
+    val savingsGoals: List<SavingsGoal> = emptyList(),
     val isBetaTestingEnabled: Boolean = false,
-    val locationPredictionEnabled: Boolean = false,
-    val recentLocations: List<String> = emptyList(),
+    val isLivingExpensePoolEnabled: Boolean = false,
+    val livingExpensePool: Double = 0.0,
+    val isIncomeTrackingEnabled: Boolean = true,
+    val isSearchEnabled: Boolean = true,
+    val isSubscriptionEnabled: Boolean = true,
+    val isMultiAccountEnabled: Boolean = true,
+    val isSavingsGoalsEnabled: Boolean = true,
+    val isModern3DUiEnabled: Boolean = true,
+    val isDragDateReorderEnabled: Boolean = true,
     val autoBackupEnabled: Boolean = true,
-    val lastAutoBackupTime: Long = 0L
+    val lastAutoBackupTime: Long = 0L,
+    val isInitialized: Boolean = true
 ) {
     val remainingBudget: Double
         get() = totalBudgetLimit - totalExpense
@@ -64,7 +98,7 @@ class DebitViewModel(
     private val settingsPrefs = SettingsPreferences(application)
 
     val systemYearMonthStr: String
-        get() = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
+        get() = DateFormatUtils.formatYM(Date())
 
     private val _selectedYearMonth = MutableStateFlow(systemYearMonthStr)
     val selectedYearMonth: StateFlow<String> = _selectedYearMonth
@@ -75,11 +109,22 @@ class DebitViewModel(
     private val _appLanguage = MutableStateFlow(settingsPrefs.getLanguage())
     val appLanguage: StateFlow<AppLanguage> = _appLanguage
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
     private val _betaTestingEnabled = MutableStateFlow(settingsPrefs.isBetaTestingEnabled())
     val betaTestingEnabled: StateFlow<Boolean> = _betaTestingEnabled
 
-    private val _locationPredictionEnabled = MutableStateFlow(settingsPrefs.isLocationPredictionEnabled())
-    val locationPredictionEnabled: StateFlow<Boolean> = _locationPredictionEnabled
+    private val _livingExpensePoolEnabled = MutableStateFlow(settingsPrefs.isLivingExpensePoolEnabled())
+    val livingExpensePoolEnabled: StateFlow<Boolean> = _livingExpensePoolEnabled
+
+    private val _incomeTrackingEnabled = MutableStateFlow(settingsPrefs.isIncomeTrackingEnabled())
+    private val _searchEnabled = MutableStateFlow(settingsPrefs.isSearchEnabled())
+    private val _subscriptionEnabled = MutableStateFlow(settingsPrefs.isSubscriptionEnabled())
+    private val _multiAccountEnabled = MutableStateFlow(settingsPrefs.isMultiAccountEnabled())
+    private val _savingsGoalsEnabled = MutableStateFlow(settingsPrefs.isSavingsGoalsEnabled())
+    private val _modern3DUiEnabled = MutableStateFlow(settingsPrefs.isModern3DUiEnabled())
+    private val _dragDateReorderEnabled = MutableStateFlow(settingsPrefs.isDragDateReorderEnabled())
 
     private val _autoBackupEnabled = MutableStateFlow(settingsPrefs.isAutoBackupEnabled())
     val autoBackupEnabled: StateFlow<Boolean> = _autoBackupEnabled
@@ -87,66 +132,141 @@ class DebitViewModel(
     private val _lastAutoBackupTime = MutableStateFlow(settingsPrefs.getLastAutoBackupTime())
     val lastAutoBackupTime: StateFlow<Long> = _lastAutoBackupTime
 
+    private val _isInitialized = MutableStateFlow(settingsPrefs.isInitialized())
+    val isInitialized: StateFlow<Boolean> = _isInitialized
+
     val uiState: StateFlow<DebitUiState> = combine(
-        repository.allTransactions,
-        repository.globalBudget,
-        _selectedYearMonth,
-        _themeColor,
-        _appLanguage
-    ) { transactions, globalBudget, selectedYM, themeColor, language ->
+        combine(
+            repository.allTransactions,
+            repository.globalBudget,
+            repository.allSubscriptions,
+            repository.allSavingsGoals
+        ) { txs, budget, subs, goals ->
+            DataTuple(txs, budget, subs, goals)
+        },
+        combine(
+            _selectedYearMonth,
+            _themeColor,
+            _appLanguage,
+            _searchQuery
+        ) { ym, theme, lang, query ->
+            PrefsTuple(ym, theme, lang, query)
+        }
+    ) { dataTuple, prefsTuple ->
+        val (transactions, globalBudget, subscriptions, savingsGoals) = dataTuple
+        val (selectedYM, themeColor, language, query) = prefsTuple
+
         val betaEnabled = _betaTestingEnabled.value
-        val locationEnabled = betaEnabled && _locationPredictionEnabled.value
+        val poolEnabled = betaEnabled && _livingExpensePoolEnabled.value
+        val incomeEnabled = betaEnabled && _incomeTrackingEnabled.value
+        val searchEnabled = betaEnabled && _searchEnabled.value
+        val subscriptionEnabled = betaEnabled && _subscriptionEnabled.value
+        val multiAccountEnabled = betaEnabled && _multiAccountEnabled.value
+        val savingsGoalsEnabled = betaEnabled && _savingsGoalsEnabled.value
+        val modern3DUiEnabled = betaEnabled && _modern3DUiEnabled.value
+        val dragDateReorderEnabled = betaEnabled && _dragDateReorderEnabled.value
+
         val autoBackupOn = _autoBackupEnabled.value
         val lastBackupTime = _lastAutoBackupTime.value
+        val initialized = _isInitialized.value
 
         val currentMonthTransactions = transactions.filter {
-            SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(it.date)) == selectedYM
+            DateFormatUtils.formatYM(Date(it.date)) == selectedYM
         }
 
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val filteredTx = if (searchEnabled && query.isNotBlank()) {
+            val q = query.trim().lowercase(Locale.getDefault())
+            currentMonthTransactions.filter {
+                it.category.lowercase(Locale.getDefault()).contains(q) ||
+                it.note.lowercase(Locale.getDefault()).contains(q) ||
+                it.locationName.lowercase(Locale.getDefault()).contains(q) ||
+                it.accountName.lowercase(Locale.getDefault()).contains(q)
+            }
+        } else {
+            currentMonthTransactions
+        }
+
+        val todayStr = DateFormatUtils.formatYMD(Date())
         var totalExp = 0.0
+        var totalInc = 0.0
         var todayExp = 0.0
+        var pastDaysExpense = 0.0
+        var poolSpent = 0.0
         val catExpenses = mutableMapOf<String, Double>()
 
-        for (tx in currentMonthTransactions) {
-            totalExp += tx.amount
-            catExpenses[tx.category] = (catExpenses[tx.category] ?: 0.0) + tx.amount
+        val calendar = Calendar.getInstance()
+        val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
+        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
 
-            val txDayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(tx.date))
-            if (txDayStr == todayStr) {
-                todayExp += tx.amount
+        for (tx in currentMonthTransactions) {
+            if (tx.type == TransactionType.INCOME) {
+                if (incomeEnabled) {
+                    totalInc += tx.amount
+                }
+            } else {
+                catExpenses[tx.category] = (catExpenses[tx.category] ?: 0.0) + tx.amount
+
+                if (tx.deductFromPool) {
+                    poolSpent += tx.amount
+                } else {
+                    totalExp += tx.amount
+
+                    val txDate = Date(tx.date)
+                    val txDayStr = DateFormatUtils.formatYMD(txDate)
+                    if (txDayStr == todayStr) {
+                        todayExp += tx.amount
+                    } else {
+                        val txCal = Calendar.getInstance().apply { time = txDate }
+                        if (txCal.get(Calendar.DAY_OF_MONTH) < currentDay) {
+                            pastDaysExpense += tx.amount
+                        }
+                    }
+                }
             }
         }
 
         val totalBgt = globalBudget?.amountLimit ?: 0.0
+        val dailyLimit = if (totalBgt > 0) totalBgt / daysInMonth else 0.0
+        val pastAllocated = maxOf(0, currentDay - 1) * dailyLimit
+        val poolAmount = if (poolEnabled && totalBgt > 0) (pastAllocated - pastDaysExpense - poolSpent) else 0.0
+        val monthlySubs = subscriptions.sumOf { it.amount }
 
         val monthsInDb = transactions.map {
-            SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(it.date))
+            DateFormatUtils.formatYM(Date(it.date))
         }
         val allMonths = (monthsInDb + systemYearMonthStr).distinct().sortedDescending()
-
-        val recentLocs = transactions
-            .map { it.locationName.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .take(6)
 
         DebitUiState(
             currentYearMonth = selectedYM,
             availableMonths = allMonths,
             isCurrentMonth = selectedYM == systemYearMonthStr,
             transactions = currentMonthTransactions,
+            filteredTransactions = filteredTx,
             totalExpense = totalExp,
+            totalIncome = totalInc,
+            netSavings = totalInc - totalExp,
             todayExpense = todayExp,
             totalBudgetLimit = totalBgt,
             categoryExpenses = catExpenses,
             themeColor = themeColor,
             appLanguage = language,
+            searchQuery = query,
+            subscriptions = subscriptions,
+            totalSubscriptionsMonthly = monthlySubs,
+            savingsGoals = savingsGoals,
             isBetaTestingEnabled = betaEnabled,
-            locationPredictionEnabled = locationEnabled,
-            recentLocations = recentLocs,
+            isLivingExpensePoolEnabled = poolEnabled,
+            livingExpensePool = poolAmount,
+            isIncomeTrackingEnabled = incomeEnabled,
+            isSearchEnabled = searchEnabled,
+            isSubscriptionEnabled = subscriptionEnabled,
+            isMultiAccountEnabled = multiAccountEnabled,
+            isSavingsGoalsEnabled = savingsGoalsEnabled,
+            isModern3DUiEnabled = modern3DUiEnabled,
+            isDragDateReorderEnabled = dragDateReorderEnabled,
             autoBackupEnabled = autoBackupOn,
-            lastAutoBackupTime = lastBackupTime
+            lastAutoBackupTime = lastBackupTime,
+            isInitialized = initialized
         )
     }.stateIn(
         scope = viewModelScope,
@@ -156,23 +276,22 @@ class DebitViewModel(
             themeColor = settingsPrefs.getThemeColor(),
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
-            locationPredictionEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isLocationPredictionEnabled(),
+            isLivingExpensePoolEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isLivingExpensePoolEnabled(),
+            isIncomeTrackingEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isIncomeTrackingEnabled(),
+            isSearchEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSearchEnabled(),
+            isSubscriptionEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSubscriptionEnabled(),
+            isMultiAccountEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isMultiAccountEnabled(),
+            isSavingsGoalsEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSavingsGoalsEnabled(),
+            isModern3DUiEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isModern3DUiEnabled(),
+            isDragDateReorderEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isDragDateReorderEnabled(),
             autoBackupEnabled = settingsPrefs.isAutoBackupEnabled(),
-            lastAutoBackupTime = settingsPrefs.getLastAutoBackupTime()
+            lastAutoBackupTime = settingsPrefs.getLastAutoBackupTime(),
+            isInitialized = settingsPrefs.isInitialized()
         )
     )
 
-    fun getLocationEstimate(locationQuery: String): Pair<Double, Int> {
-        if (locationQuery.isBlank()) return Pair(0.0, 0)
-        val query = locationQuery.trim().lowercase(Locale.getDefault())
-        val allTx = uiState.value.transactions
-        val matches = allTx.filter {
-            it.locationName.trim().lowercase(Locale.getDefault()) == query ||
-            (it.locationName.isBlank() && it.note.trim().lowercase(Locale.getDefault()).contains(query))
-        }
-        if (matches.isEmpty()) return Pair(0.0, 0)
-        val avg = matches.sumOf { it.amount } / matches.size
-        return Pair(avg, matches.size)
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun selectYearMonth(yearMonth: String) {
@@ -201,7 +320,6 @@ class DebitViewModel(
                 txList.forEach { repository.addTransaction(it) }
                 bgtList.forEach { repository.setBudget(it) }
                 BudgetWidgetProvider.updateAllWidgets(getApplication())
-                triggerAutoBackup()
                 onResult(txList.size)
             } catch (_: Exception) {
                 onResult(-1)
@@ -214,22 +332,50 @@ class DebitViewModel(
         color: AppThemeColor,
         language: AppLanguage,
         betaTestingEnabled: Boolean,
-        locationPredictionEnabled: Boolean,
+        livingExpensePoolEnabled: Boolean,
+        incomeTrackingEnabled: Boolean,
+        searchEnabled: Boolean,
+        subscriptionEnabled: Boolean,
+        multiAccountEnabled: Boolean,
+        savingsGoalsEnabled: Boolean,
+        modern3DUiEnabled: Boolean,
+        dragDateReorderEnabled: Boolean,
         autoBackupEnabled: Boolean
     ) {
         viewModelScope.launch {
-            val effectiveLocationPrediction = betaTestingEnabled && locationPredictionEnabled
+            val effPool = betaTestingEnabled && livingExpensePoolEnabled
+            val effIncome = betaTestingEnabled && incomeTrackingEnabled
+            val effSearch = betaTestingEnabled && searchEnabled
+            val effSub = betaTestingEnabled && subscriptionEnabled
+            val effMultiAcc = betaTestingEnabled && multiAccountEnabled
+            val effSavings = betaTestingEnabled && savingsGoalsEnabled
+            val effModern3D = betaTestingEnabled && modern3DUiEnabled
+            val effDragDate = betaTestingEnabled && dragDateReorderEnabled
 
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
             settingsPrefs.setBetaTestingEnabled(betaTestingEnabled)
-            settingsPrefs.setLocationPredictionEnabled(effectiveLocationPrediction)
+            settingsPrefs.setLivingExpensePoolEnabled(effPool)
+            settingsPrefs.setIncomeTrackingEnabled(effIncome)
+            settingsPrefs.setSearchEnabled(effSearch)
+            settingsPrefs.setSubscriptionEnabled(effSub)
+            settingsPrefs.setMultiAccountEnabled(effMultiAcc)
+            settingsPrefs.setSavingsGoalsEnabled(effSavings)
+            settingsPrefs.setModern3DUiEnabled(effModern3D)
+            settingsPrefs.setDragDateReorderEnabled(effDragDate)
             settingsPrefs.setAutoBackupEnabled(autoBackupEnabled)
 
             _themeColor.value = color
             _appLanguage.value = language
             _betaTestingEnabled.value = betaTestingEnabled
-            _locationPredictionEnabled.value = effectiveLocationPrediction
+            _livingExpensePoolEnabled.value = effPool
+            _incomeTrackingEnabled.value = effIncome
+            _searchEnabled.value = effSearch
+            _subscriptionEnabled.value = effSub
+            _multiAccountEnabled.value = effMultiAcc
+            _savingsGoalsEnabled.value = effSavings
+            _modern3DUiEnabled.value = effModern3D
+            _dragDateReorderEnabled.value = effDragDate
             _autoBackupEnabled.value = autoBackupEnabled
 
             repository.setBudget(
@@ -249,17 +395,22 @@ class DebitViewModel(
         category: String,
         note: String,
         date: Long = System.currentTimeMillis(),
-        locationName: String = ""
+        locationName: String = "",
+        deductFromPool: Boolean = false,
+        accountName: String = "現金",
+        type: TransactionType = TransactionType.EXPENSE
     ) {
         viewModelScope.launch {
             repository.addTransaction(
                 Transaction(
                     amount = amount,
                     category = category,
-                    type = TransactionType.EXPENSE,
+                    type = type,
                     note = note,
                     date = date,
-                    locationName = locationName
+                    locationName = locationName,
+                    deductFromPool = deductFromPool,
+                    accountName = accountName
                 )
             )
             BudgetWidgetProvider.updateAllWidgets(getApplication())
@@ -273,7 +424,10 @@ class DebitViewModel(
         category: String,
         note: String,
         date: Long,
-        locationName: String = ""
+        locationName: String = "",
+        deductFromPool: Boolean = false,
+        accountName: String = "現金",
+        type: TransactionType = TransactionType.EXPENSE
     ) {
         viewModelScope.launch {
             repository.updateTransaction(
@@ -281,12 +435,23 @@ class DebitViewModel(
                     id = id,
                     amount = amount,
                     category = category,
-                    type = TransactionType.EXPENSE,
+                    type = type,
                     note = note,
                     date = date,
-                    locationName = locationName
+                    locationName = locationName,
+                    deductFromPool = deductFromPool,
+                    accountName = accountName
                 )
             )
+            BudgetWidgetProvider.updateAllWidgets(getApplication())
+            triggerAutoBackup()
+        }
+    }
+
+    fun moveTransactionToDate(transaction: Transaction, newDateMillis: Long) {
+        viewModelScope.launch {
+            val updated = transaction.copy(date = newDateMillis)
+            repository.updateTransaction(updated)
             BudgetWidgetProvider.updateAllWidgets(getApplication())
             triggerAutoBackup()
         }
@@ -300,12 +465,155 @@ class DebitViewModel(
         }
     }
 
-    fun setBudget(amountLimit: Double) {
+    fun addSubscription(name: String, amount: Double, billingDay: Int) {
+        viewModelScope.launch {
+            repository.addSubscription(Subscription(name = name, amount = amount, billingDay = billingDay))
+        }
+    }
+
+    fun deleteSubscription(subscription: Subscription) {
+        viewModelScope.launch {
+            repository.deleteSubscription(subscription)
+        }
+    }
+
+    fun addSavingsGoal(title: String, targetAmount: Double, initialAmount: Double) {
+        viewModelScope.launch {
+            repository.addSavingsGoal(SavingsGoal(title = title, targetAmount = targetAmount, currentAmount = initialAmount))
+        }
+    }
+
+    fun depositToSavingsGoal(savingsGoal: SavingsGoal, amount: Double) {
+        viewModelScope.launch {
+            val updated = savingsGoal.copy(currentAmount = savingsGoal.currentAmount + amount)
+            repository.updateSavingsGoal(updated)
+        }
+    }
+
+    fun deleteSavingsGoal(savingsGoal: SavingsGoal) {
+        viewModelScope.launch {
+            repository.deleteSavingsGoal(savingsGoal)
+        }
+    }
+
+    fun getCustomSubCategories(category: String): List<String> {
+        return settingsPrefs.getCustomSubCategories(category)
+    }
+
+    fun addCustomSubCategory(category: String, subCategory: String) {
+        settingsPrefs.addCustomSubCategory(category, subCategory)
+    }
+
+    fun setBudgetLimit(amountLimit: Double) {
         viewModelScope.launch {
             repository.setBudget(
                 Budget(
                     category = "TOTAL",
                     amountLimit = amountLimit,
+                    yearMonth = "GLOBAL"
+                )
+            )
+            BudgetWidgetProvider.updateAllWidgets(getApplication())
+            triggerAutoBackup()
+        }
+    }
+
+    fun setThemeColor(color: AppThemeColor) {
+        viewModelScope.launch {
+            settingsPrefs.setThemeColor(color)
+            _themeColor.value = color
+            BudgetWidgetProvider.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        viewModelScope.launch {
+            settingsPrefs.setLanguage(language)
+            _appLanguage.value = language
+        }
+    }
+
+    fun setBetaTestingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setBetaTestingEnabled(enabled)
+            _betaTestingEnabled.value = enabled
+        }
+    }
+
+    fun setLivingExpensePoolEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setLivingExpensePoolEnabled(enabled)
+            _livingExpensePoolEnabled.value = enabled
+        }
+    }
+
+    fun setIncomeTrackingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setIncomeTrackingEnabled(enabled)
+            _incomeTrackingEnabled.value = enabled
+        }
+    }
+
+    fun setSearchEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setSearchEnabled(enabled)
+            _searchEnabled.value = enabled
+        }
+    }
+
+    fun setSubscriptionEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setSubscriptionEnabled(enabled)
+            _subscriptionEnabled.value = enabled
+        }
+    }
+
+    fun setMultiAccountEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setMultiAccountEnabled(enabled)
+            _multiAccountEnabled.value = enabled
+        }
+    }
+
+    fun setSavingsGoalsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setSavingsGoalsEnabled(enabled)
+            _savingsGoalsEnabled.value = enabled
+        }
+    }
+
+    fun setModern3DUiEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setModern3DUiEnabled(enabled)
+            _modern3DUiEnabled.value = enabled
+        }
+    }
+
+    fun setAutoBackupEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setAutoBackupEnabled(enabled)
+            _autoBackupEnabled.value = enabled
+        }
+    }
+
+    fun completeOnboarding(
+        budgetLimit: Double,
+        color: AppThemeColor,
+        language: AppLanguage
+    ) {
+        viewModelScope.launch {
+            settingsPrefs.setThemeColor(color)
+            settingsPrefs.setLanguage(language)
+            settingsPrefs.setInitialized(true)
+
+            _themeColor.value = color
+            _appLanguage.value = language
+            _isInitialized.value = true
+
+            repository.setBudget(
+                Budget(
+                    category = "TOTAL",
+                    amountLimit = budgetLimit,
                     yearMonth = "GLOBAL"
                 )
             )

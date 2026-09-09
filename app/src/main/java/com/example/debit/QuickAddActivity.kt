@@ -22,7 +22,12 @@ class QuickAddActivity : ComponentActivity() {
         requestHighRefreshRate(this)
 
         val database = AppDatabase.getDatabase(applicationContext)
-        val repository = DebitRepository(database.transactionDao(), database.budgetDao())
+        val repository = DebitRepository(
+            database.transactionDao(),
+            database.budgetDao(),
+            database.subscriptionDao(),
+            database.savingsGoalDao()
+        )
 
         setContent {
             DebitTheme {
@@ -31,16 +36,18 @@ class QuickAddActivity : ComponentActivity() {
                 ) {
                     AddTransactionDialog(
                         onDismissRequest = { finish() },
-                        onConfirm = { amount, category, note, date, locationName ->
+                        onConfirm = { amount, category, note, date, locationName, deductFromPool, accountName, type ->
                             lifecycleScope.launch {
                                 repository.addTransaction(
                                     Transaction(
                                         amount = amount,
                                         category = category,
-                                        type = TransactionType.EXPENSE,
+                                        type = type,
                                         note = note,
                                         date = date,
-                                        locationName = locationName
+                                        locationName = locationName,
+                                        deductFromPool = deductFromPool,
+                                        accountName = accountName
                                     )
                                 )
                                 BudgetWidgetProvider.updateAllWidgets(applicationContext)
