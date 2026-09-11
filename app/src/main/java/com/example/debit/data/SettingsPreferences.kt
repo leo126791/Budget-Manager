@@ -39,7 +39,7 @@ val AppThemeColor.containerColorInt: Int
     }
 
 enum class AppLanguage(val code: String, val displayName: String) {
-    ZH("zh", "繁體中文"),
+    ZH("zh-TW", "繁體中文"),
     EN("en", "English")
 }
 
@@ -65,7 +65,7 @@ class SettingsPreferences(context: Context) {
     }
 
     fun isBetaTestingEnabled(): Boolean {
-        return prefs.getBoolean("beta_testing", false)
+        return prefs.getBoolean("beta_testing", true)
     }
 
     fun setBetaTestingEnabled(enabled: Boolean) {

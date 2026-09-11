@@ -229,7 +229,7 @@ class DebitViewModel(
         val dailyLimit = if (totalBgt > 0) totalBgt / daysInMonth else 0.0
         val pastAllocated = maxOf(0, currentDay - 1) * dailyLimit
         val poolAmount = if (poolEnabled && totalBgt > 0) (pastAllocated - pastDaysExpense - poolSpent) else 0.0
-        val monthlySubs = subscriptions.sumOf { it.amount }
+        val monthlySubs = subscriptions.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
 
         val monthsInDb = transactions.map {
             DateFormatUtils.formatYM(Date(it.date))
@@ -465,9 +465,9 @@ class DebitViewModel(
         }
     }
 
-    fun addSubscription(name: String, amount: Double, billingDay: Int) {
+    fun addSubscription(name: String, amount: Double, billingDay: Int, billingMonth: Int = 1, isAnnual: Boolean = false) {
         viewModelScope.launch {
-            repository.addSubscription(Subscription(name = name, amount = amount, billingDay = billingDay))
+            repository.addSubscription(Subscription(name = name, amount = amount, billingDay = billingDay, billingMonth = billingMonth, isAnnual = isAnnual))
         }
     }
 
@@ -599,15 +599,18 @@ class DebitViewModel(
     fun completeOnboarding(
         budgetLimit: Double,
         color: AppThemeColor,
-        language: AppLanguage
+        language: AppLanguage,
+        betaTestingEnabled: Boolean = true
     ) {
         viewModelScope.launch {
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
+            settingsPrefs.setBetaTestingEnabled(betaTestingEnabled)
             settingsPrefs.setInitialized(true)
 
             _themeColor.value = color
             _appLanguage.value = language
+            _betaTestingEnabled.value = betaTestingEnabled
             _isInitialized.value = true
 
             repository.setBudget(

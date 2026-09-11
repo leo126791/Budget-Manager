@@ -57,6 +57,9 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.Icon
@@ -95,7 +98,9 @@ import com.example.debit.data.Transaction
 import com.example.debit.data.TransactionType
 import com.example.debit.ui.DebitViewModel
 import com.example.debit.ui.components.ExpensePieChartCard
-import com.example.debit.ui.components.Modern3DBudgetCard
+import com.example.debit.ui.components.Modern3DAllocationCard
+import com.example.debit.ui.components.Modern3DSavingsHeroCard
+import com.example.debit.ui.components.Modern3DStatRow
 import com.example.debit.ui.components.Modern3DTransactionItem
 import com.example.debit.ui.dialogs.AddTransactionDialog
 import com.example.debit.ui.dialogs.BudgetSettingsDialog
@@ -385,24 +390,35 @@ fun DashboardScreen(
                 }
             }
 
-            // 1. Swipeable Budget Overview Card
-            item {
-                if (uiState.isModern3DUiEnabled) {
-                    Modern3DBudgetCard(
+            // 1. Hero Card & Beta Dashboard Elements
+            if (uiState.isModern3DUiEnabled) {
+                item {
+                    Modern3DSavingsHeroCard(
                         totalBudget = uiState.totalBudgetLimit,
                         totalExpense = uiState.totalExpense,
-                        todayExpense = uiState.todayExpense,
                         remainingBudget = uiState.remainingBudget,
-                        progress = uiState.totalBudgetProgress,
-                        isOverBudget = uiState.isOverBudget,
-                        isNearLimit = uiState.isNearBudgetLimit,
-                        isLivingExpensePoolEnabled = uiState.isLivingExpensePoolEnabled,
-                        livingExpensePool = uiState.livingExpensePool,
                         language = lang,
-                        onOpenBudgetSettings = { showSettingsDialog = true },
                         onOpenMonthlyBreakdown = { showMonthlyBreakdownDialog = true }
                     )
-                } else {
+                }
+
+                item {
+                    Modern3DStatRow(
+                        totalExpense = uiState.totalExpense,
+                        remainingBudget = uiState.remainingBudget,
+                        language = lang
+                    )
+                }
+
+                item {
+                    Modern3DAllocationCard(
+                        categoryExpenses = uiState.categoryExpenses,
+                        totalExpense = uiState.totalExpense,
+                        language = lang
+                    )
+                }
+            } else {
+                item {
                     BudgetOverviewCard(
                         totalBudget = uiState.totalBudgetLimit,
                         totalExpense = uiState.totalExpense,
@@ -417,6 +433,18 @@ fun DashboardScreen(
                         onOpenBudgetSettings = { showSettingsDialog = true },
                         onOpenMonthlyBreakdown = { showMonthlyBreakdownDialog = true }
                     )
+                }
+
+                if ((uiState.totalExpense > 0 || uiState.totalBudgetLimit > 0) && uiState.categoryExpenses.isNotEmpty()) {
+                    item {
+                        ExpensePieChartCard(
+                            categoryExpenses = uiState.categoryExpenses,
+                            totalExpense = uiState.totalExpense,
+                            totalBudget = uiState.totalBudgetLimit,
+                            transactions = uiState.transactions,
+                            language = lang
+                        )
+                    }
                 }
             }
 
@@ -450,19 +478,6 @@ fun DashboardScreen(
                             }
                         }
                     }
-                }
-            }
-
-            // 3. Category Expense Pie Chart & Daily Chart Card
-            if ((uiState.totalExpense > 0 || uiState.totalBudgetLimit > 0) && uiState.categoryExpenses.isNotEmpty()) {
-                item {
-                    ExpensePieChartCard(
-                        categoryExpenses = uiState.categoryExpenses,
-                        totalExpense = uiState.totalExpense,
-                        totalBudget = uiState.totalBudgetLimit,
-                        transactions = uiState.transactions,
-                        language = lang
-                    )
                 }
             }
 
@@ -500,14 +515,42 @@ fun DashboardScreen(
                                 )
                             } else {
                                 uiState.subscriptions.forEach { sub ->
+                                    val cycleTag = if (sub.isAnnual) (if (lang == AppLanguage.ZH) "[年繳]" else "[Annual]") else (if (lang == AppLanguage.ZH) "[月繳]" else "[Monthly]")
+                                    val dateDetailStr = if (sub.isAnnual) {
+                                        if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日" else "Annual ${sub.billingMonth}/${sub.billingDay}"
+                                    } else {
+                                        if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日" else "Monthly day ${sub.billingDay}"
+                                    }
+                                    val amountText = if (sub.isAnnual) {
+                                        val monthlyAvg = sub.amount / 12.0
+                                        "$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年 (約 $${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
+                                    } else {
+                                        "$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/月"
+                                    }
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("${sub.name} (每月 ${sub.billingDay} 日)", style = MaterialTheme.typography.bodySmall)
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (sub.isAnnual) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                            ) {
+                                                Text(
+                                                    text = cycleTag,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontSize = 10.sp,
+                                                    color = if (sub.isAnnual) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("${sub.name} ($dateDetailStr)", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(amountText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                             IconButton(onClick = { viewModel.deleteSubscription(sub) }, modifier = Modifier.size(24.dp)) {
                                                 Icon(Icons.Default.Delete, contentDescription = "刪除", modifier = Modifier.size(16.dp))
                                             }
@@ -832,8 +875,8 @@ fun DashboardScreen(
         AddSubscriptionDialog(
             language = lang,
             onDismissRequest = { showAddSubscriptionDialog = false },
-            onConfirm = { name, amount, day ->
-                viewModel.addSubscription(name, amount, day)
+            onConfirm = { name, amount, day, month, isAnnual ->
+                viewModel.addSubscription(name, amount, day, month, isAnnual)
             }
         )
     }
@@ -853,11 +896,13 @@ fun DashboardScreen(
 fun AddSubscriptionDialog(
     language: AppLanguage,
     onDismissRequest: () -> Unit,
-    onConfirm: (name: String, amount: Double, billingDay: Int) -> Unit
+    onConfirm: (name: String, amount: Double, billingDay: Int, billingMonth: Int, isAnnual: Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
+    var billingMonthText by remember { mutableStateOf("1") }
     var billingDayText by remember { mutableStateOf("1") }
+    var isAnnual by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(false) }
 
     val isZh = language == AppLanguage.ZH
@@ -866,7 +911,24 @@ fun AddSubscriptionDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(if (isZh) "新增定期扣款 / 訂閱項目" else "Add Subscription") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = !isAnnual,
+                        onClick = { isAnnual = false },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text(if (isZh) "🗓️ 月繳" else "Monthly")
+                    }
+                    SegmentedButton(
+                        selected = isAnnual,
+                        onClick = { isAnnual = true },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(if (isZh) "📅 年繳" else "Annual")
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; isError = false },
@@ -878,19 +940,44 @@ fun AddSubscriptionDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text(if (isZh) "每月扣款金額 ($)" else "Monthly Amount") },
+                    label = { Text(if (isAnnual) (if (isZh) "每年扣款總金額 ($)" else "Annual Amount ($)") else (if (isZh) "每月扣款金額 ($)" else "Monthly Amount ($)")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = billingDayText,
-                    onValueChange = { billingDayText = it },
-                    label = { Text(if (isZh) "每月扣款日期 (1-31 日)" else "Billing Day (1-31)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+
+                if (isAnnual) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = billingMonthText,
+                            onValueChange = { billingMonthText = it },
+                            label = { Text(if (isZh) "扣款月份 (1-12 月)" else "Billing Month (1-12)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = billingDayText,
+                            onValueChange = { billingDayText = it },
+                            label = { Text(if (isZh) "扣款日期 (1-31 日)" else "Billing Day (1-31)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = billingDayText,
+                        onValueChange = { billingDayText = it },
+                        label = { Text(if (isZh) "每月扣款日期 (1-31 日)" else "Billing Day (1-31)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         },
         confirmButton = {
@@ -898,11 +985,12 @@ fun AddSubscriptionDialog(
                 onClick = {
                     val trimmed = name.trim()
                     val amt = amountText.toDoubleOrNull() ?: 0.0
+                    val month = billingMonthText.toIntOrNull()?.coerceIn(1, 12) ?: 1
                     val day = billingDayText.toIntOrNull()?.coerceIn(1, 31) ?: 1
                     if (trimmed.isBlank() || amt <= 0) {
                         isError = true
                     } else {
-                        onConfirm(trimmed, amt, day)
+                        onConfirm(trimmed, amt, day, month, isAnnual)
                         onDismissRequest()
                     }
                 }

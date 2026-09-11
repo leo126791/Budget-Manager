@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -357,6 +358,49 @@ fun OnboardingScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Step 4: Beta Features Option
+                var betaTestingState by remember { mutableStateOf(uiState.isBetaTestingEnabled) }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (selectedLanguage == AppLanguage.ZH) "🧪 搶先體驗 Beta 實驗性功能" else "🧪 Enable Beta Features",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = betaTestingState,
+                                onCheckedChange = { betaTestingState = it }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = if (selectedLanguage == AppLanguage.ZH)
+                                "包含 3D 現代手繪 UI、收入記帳、關鍵字搜尋、訂閱管理、多帳戶與儲蓄目標箱（可隨時在設定中開啟或關閉）"
+                            else
+                                "Includes 3D Modern UI, Income Tracking, Search, Subscriptions, Multi Accounts & Savings Goals (Can be toggled in settings anytime)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(36.dp))
 
                 // Start Button CTA
@@ -367,7 +411,8 @@ fun OnboardingScreen(
                         viewModel.completeOnboarding(
                             budgetLimit = parsedBudget,
                             color = selectedTheme,
-                            language = selectedLanguage
+                            language = selectedLanguage,
+                            betaTestingEnabled = betaTestingState
                         )
                     },
                     modifier = Modifier

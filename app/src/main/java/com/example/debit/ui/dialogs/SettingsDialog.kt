@@ -341,7 +341,7 @@ fun SettingsDialog(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = if (isZh) "搜尋消費備註、類別" else "Search notes, locations & categories",
+                                            text = if (isZh) "搜尋消費備註、類別" else "Search notes & categories",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -390,7 +390,7 @@ fun SettingsDialog(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = if (isZh) "多帳戶與支付方式" else "Accounts & Payment Methods",
+                                            text = if (isZh) "支付方式" else "Payment Methods",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -406,8 +406,6 @@ fun SettingsDialog(
                                         onCheckedChange = { multiAccountState = it }
                                     )
                                 }
-
-                                HorizontalDivider()
 
                                 HorizontalDivider()
 
@@ -473,8 +471,8 @@ fun SettingsDialog(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = if (isZh) "長按移動紀錄" else "Move Date on Long Press",
-                                            style = MaterialTheme.typography.titleSmall,
+                                            text = if (isZh) "長按移動紀錄(不建議開啟)" else "Move Date on Long Press(not recommended to enable it)",
+                                              style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
