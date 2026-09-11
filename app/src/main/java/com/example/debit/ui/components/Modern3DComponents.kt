@@ -1,7 +1,7 @@
 package com.example.debit.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,16 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,11 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -61,6 +56,7 @@ import com.example.debit.ui.utils.OrganicShapeMedium
 import com.example.debit.ui.utils.bouncyClickable
 import com.example.debit.ui.utils.getCategoryIcon
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -99,31 +95,28 @@ fun Modern3DSavingsHeroCard(
     val isZh = language == AppLanguage.ZH
     val estimatedSavings = if (totalBudget > 0) maxOf(0.0, remainingBudget) else maxOf(0.0, totalBudget - totalExpense)
     val progress = if (totalBudget > 0) (totalExpense / totalBudget).toFloat().coerceIn(0f, 1f) else 0f
+    val remainingProgressPercent = maxOf(0, (100 - (progress * 100)).toInt())
+    val spentPercent = (progress * 100).toInt()
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "savingsProgress")
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(16.dp, shape = RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
+            .shadow(12.dp, shape = RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF1A3E2C),
-                        Color(0xFF143223),
-                        Color(0xFF0E2419)
+                        Color(0xFF346247),
+                        Color(0xFF1B4A31),
+                        Color(0xFF142C1E)
                     )
                 )
-            )
-            .border(
-                width = 1.dp,
-                color = Color(0xFF34D399).copy(alpha = 0.25f),
-                shape = RoundedCornerShape(24.dp)
             )
             .bouncyClickable { onOpenMonthlyBreakdown() }
             .padding(20.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -132,10 +125,35 @@ fun Modern3DSavingsHeroCard(
             ) {
                 Text(
                     text = if (isZh) "預估本月儲蓄 Estimated Savings" else "Estimated Savings",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF34D399),
-                    letterSpacing = 0.5.sp
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF34D399)
                 )
+
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF34D399).copy(alpha = 0.2f),
+                    border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF34D399))
+                        )
+                        Text(
+                            text = if (isZh) "自動計算中" else "Live Sync",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF34D399)
+                        )
+                    }
+                }
             }
 
             // Big Savings Amount
@@ -171,7 +189,7 @@ fun Modern3DSavingsHeroCard(
                         color = Color(0xFFD1FAE5).copy(alpha = 0.9f)
                     )
                     Text(
-                        text = if (isZh) "剩餘 ${100 - (progress * 100).toInt()}%" else "Left ${100 - (progress * 100).toInt()}%",
+                        text = if (isZh) "剩餘 $remainingProgressPercent%" else "Left $remainingProgressPercent%",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = Color(0xFF6EE7B7)
                     )
@@ -182,8 +200,8 @@ fun Modern3DSavingsHeroCard(
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF132A1E))
-                        .border(1.dp, Color.White.copy(alpha = 0.05f), CircleShape)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
                 ) {
                     Box(
                         modifier = Modifier
@@ -195,19 +213,18 @@ fun Modern3DSavingsHeroCard(
                                     listOf(Color(0xFF10B981), Color(0xFF34D399))
                                 )
                             )
-                            .shadow(12.dp, spotColor = Color(0xFF34D399), ambientColor = Color(0xFF34D399))
                     )
                 }
             }
 
-            // Footer Metrics Row
+            // Footer Metrics Box
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black.copy(alpha = 0.35f))
-                    .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -215,6 +232,7 @@ fun Modern3DSavingsHeroCard(
                     Text(
                         text = if (isZh) "已花費 Total Spent" else "Total Spent",
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = 11.sp,
                         color = Color(0xFFA7F3D0).copy(alpha = 0.7f)
                     )
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -224,7 +242,7 @@ fun Modern3DSavingsHeroCard(
                             color = Color.White
                         )
                         Text(
-                            text = "(${(progress * 100).toInt()}%)",
+                            text = "($spentPercent%)",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF6EE7B7).copy(alpha = 0.7f),
                             modifier = Modifier.padding(bottom = 2.dp)
@@ -232,12 +250,13 @@ fun Modern3DSavingsHeroCard(
                     }
                 }
 
-                Box(modifier = Modifier.width(1.dp).height(28.dp).background(Color.White.copy(alpha = 0.1f)))
+                Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.White.copy(alpha = 0.1f)))
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = if (isZh) "預算金庫 Total Budget" else "Total Budget",
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = 11.sp,
                         color = Color(0xFFA7F3D0).copy(alpha = 0.7f)
                     )
                     Text(
@@ -252,175 +271,121 @@ fun Modern3DSavingsHeroCard(
 }
 
 /**
- * 2. Side-by-Side Stat Cards: Avg Spend & End Balance
+ * 2. Side-by-Side Stat Cards: Spent & Remaining Left
  */
 @Composable
 fun Modern3DStatRow(
     totalExpense: Double,
+    totalBudget: Double,
     remainingBudget: Double,
     language: AppLanguage
 ) {
     val isZh = language == AppLanguage.ZH
+    val spentPercent = if (totalBudget > 0) (totalExpense / totalBudget * 100).toInt() else 0
+    val daysInMonth = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
+    val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    val remainingDays = maxOf(1, daysInMonth - currentDay + 1)
+    val dailyAvailable = if (remainingBudget > 0) remainingBudget / remainingDays else 0.0
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Left Stat Card: Total Expense
+        // Left Stat Card: Spent
         Card(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.TrendingDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = if (isZh) "總花費 Spent" else "Spent",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
                 Text(
                     text = "$${String.format(Locale.getDefault(), "%,.0f", totalExpense)}",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.error
                 )
+                Text(
+                    text = if (isZh) "佔總預算 $spentPercent%" else "Spent $spentPercent%",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                )
             }
         }
 
-        // Right Stat Card: Remaining Balance
+        // Right Stat Card: Remaining Left
         Card(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = if (remainingBudget >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = if (isZh) "預算剩餘 Remaining" else "Remaining",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = if (isZh) "預算剩餘 Left" else "Left",
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Outlined.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
                 Text(
-                    text = "$${String.format(Locale.getDefault(), "%,.0f", remainingBudget)}",
+                    text = "$${String.format(Locale.getDefault(), "%,.0f", maxOf(0.0, remainingBudget))}",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = if (remainingBudget >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
-            }
-        }
-    }
-}
-
-/**
- * 3. Expenditure Trend Smooth Line Chart
- */
-@Composable
-fun Modern3DTrendChartCard(
-    language: AppLanguage
-) {
-    val isZh = language == AppLanguage.ZH
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val fillColor = primaryColor.copy(alpha = 0.15f)
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Text(
-                    text = if (isZh) "消費趨勢 Expenditure Trend" else "Expenditure Trend",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "vs 3mo Avg",
+                    text = if (isZh) "剩餘日均可花 $${String.format(Locale.getDefault(), "%,.0f", dailyAvailable)}" else "Daily left $${String.format(Locale.getDefault(), "%,.0f", dailyAvailable)}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                 )
-            }
-
-            // Smooth Curve Canvas
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-            ) {
-                val w = size.width
-                val h = size.height
-                val points = listOf(
-                    Offset(0f, h * 0.4f),
-                    Offset(w * 0.33f, h * 0.5f),
-                    Offset(w * 0.66f, h * 0.35f),
-                    Offset(w, h * 0.42f)
-                )
-
-                val linePath = Path().apply {
-                    moveTo(points[0].x, points[0].y)
-                    for (i in 0 until points.size - 1) {
-                        val p1 = points[i]
-                        val p2 = points[i + 1]
-                        val controlPoint1 = Offset(p1.x + (p2.x - p1.x) / 2f, p1.y)
-                        val controlPoint2 = Offset(p1.x + (p2.x - p1.x) / 2f, p2.y)
-                        cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p2.x, p2.y)
-                    }
-                }
-
-                val fillPath = Path().apply {
-                    addPath(linePath)
-                    lineTo(w, h)
-                    lineTo(0f, h)
-                    close()
-                }
-
-                drawPath(fillPath, brush = Brush.verticalGradient(listOf(fillColor, Color.Transparent)))
-                drawPath(linePath, color = primaryColor, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-
-                // Draw Dots
-                points.forEach { pt ->
-                    drawCircle(color = primaryColor, radius = 5.dp.toPx(), center = pt)
-                    drawCircle(color = Color.White, radius = 2.5.dp.toPx(), center = pt)
-                }
-            }
-
-            // X Axis Labels
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("12月 Dec", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("1月 Jan", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("2月 Feb", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("平均 Avg", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -437,7 +402,7 @@ val paletteColors = listOf(
 )
 
 /**
- * 4. Spending Allocation Donut Chart (Dynamic Real Categories)
+ * 3. Spending Allocation Donut Chart (Dynamic Real Categories)
  */
 @Composable
 fun Modern3DAllocationCard(
@@ -463,8 +428,6 @@ fun Modern3DAllocationCard(
         )
     }
 
-    val monthStr = SimpleDateFormat("MMMM", Locale.getDefault()).format(Date())
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -480,14 +443,9 @@ fun Modern3DAllocationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isZh) "類別佔比 Spending Allocation" else "Spending Allocation",
+                    text = if (isZh) "本月預算佔比 Budget Allocation" else "Budget Allocation",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "$monthStr Actual",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -557,7 +515,7 @@ fun Modern3DAllocationCard(
 }
 
 /**
- * 3D Modern Transaction Card Item
+ * 4. 3D Modern Transaction Card Item
  */
 @Composable
 fun Modern3DTransactionItem(
@@ -709,16 +667,16 @@ fun Modern3DTransactionItem(
                         )
                     }
 
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = AppStrings.get("delete_item", language),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = AppStrings.get("delete_item", language),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
     }
-}
 }

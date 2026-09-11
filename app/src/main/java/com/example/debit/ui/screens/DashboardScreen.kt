@@ -405,6 +405,7 @@ fun DashboardScreen(
                 item {
                     Modern3DStatRow(
                         totalExpense = uiState.totalExpense,
+                        totalBudget = uiState.totalBudgetLimit,
                         remainingBudget = uiState.remainingBudget,
                         language = lang
                     )
