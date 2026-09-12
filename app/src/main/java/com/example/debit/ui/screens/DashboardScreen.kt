@@ -874,6 +874,7 @@ fun DashboardScreen(
                         currentThemeColor = uiState.themeColor,
                         currentLanguage = uiState.appLanguage,
                         currentBetaTestingEnabled = uiState.isBetaTestingEnabled,
+                        currentGooglePayListenerEnabled = uiState.isGooglePayListenerEnabled,
                         currentIncomeTrackingEnabled = uiState.isIncomeTrackingEnabled,
                         currentSearchEnabled = uiState.isSearchEnabled,
                         currentSubscriptionEnabled = uiState.isSubscriptionEnabled,
@@ -883,9 +884,9 @@ fun DashboardScreen(
                         currentAutoBackupEnabled = uiState.autoBackupEnabled,
                         lastAutoBackupTime = uiState.lastAutoBackupTime,
                         isEmbedded = true,
-                        onSaveSettings = { budgetLimit, color, language, betaTesting, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup ->
+                        onSaveSettings = { budgetLimit, color, language, betaTesting, gPay, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup ->
                             viewModel.saveSettings(
-                                budgetLimit, color, language, betaTesting,
+                                budgetLimit, color, language, betaTesting, gPay,
                                 incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup
                             )
                         },

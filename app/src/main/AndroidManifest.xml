@@ -69,6 +69,17 @@
                 android:resource="@xml/quick_add_widget_info" />
         </receiver>
 
+        <!-- Google Pay Notification Listener Service (Beta) -->
+        <service
+            android:name=".service.PaymentNotificationListenerService"
+            android:label="Google Pay 消費自動記帳服務"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

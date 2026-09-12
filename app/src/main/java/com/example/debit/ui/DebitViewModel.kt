@@ -61,6 +61,7 @@ data class DebitUiState(
     val subscriptions: List<Subscription> = emptyList(),
     val totalSubscriptionsMonthly: Double = 0.0,
     val isBetaTestingEnabled: Boolean = false,
+    val isGooglePayListenerEnabled: Boolean = false,
     val isIncomeTrackingEnabled: Boolean = true,
     val isSearchEnabled: Boolean = true,
     val isSubscriptionEnabled: Boolean = true,
@@ -108,6 +109,9 @@ class DebitViewModel(
 
     private val _betaTestingEnabled = MutableStateFlow(settingsPrefs.isBetaTestingEnabled())
     val betaTestingEnabled: StateFlow<Boolean> = _betaTestingEnabled
+
+    private val _googlePayListenerEnabled = MutableStateFlow(settingsPrefs.isGooglePayListenerEnabled())
+    val googlePayListenerEnabled: StateFlow<Boolean> = _googlePayListenerEnabled
 
     private val _incomeTrackingEnabled = MutableStateFlow(settingsPrefs.isIncomeTrackingEnabled())
     private val _searchEnabled = MutableStateFlow(settingsPrefs.isSearchEnabled())
@@ -198,6 +202,7 @@ class DebitViewModel(
         val (selectedYM, themeColor, language, query) = prefsTuple
 
         val betaEnabled = _betaTestingEnabled.value
+        val googlePayEnabled = betaEnabled && _googlePayListenerEnabled.value
         val incomeEnabled = betaEnabled && _incomeTrackingEnabled.value
         val searchEnabled = betaEnabled && _searchEnabled.value
         val subscriptionEnabled = betaEnabled && _subscriptionEnabled.value
@@ -274,6 +279,7 @@ class DebitViewModel(
             subscriptions = subscriptions,
             totalSubscriptionsMonthly = monthlySubs,
             isBetaTestingEnabled = betaEnabled,
+            isGooglePayListenerEnabled = googlePayEnabled,
             isIncomeTrackingEnabled = incomeEnabled,
             isSearchEnabled = searchEnabled,
             isSubscriptionEnabled = subscriptionEnabled,
@@ -292,8 +298,8 @@ class DebitViewModel(
             themeColor = settingsPrefs.getThemeColor(),
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
+            isGooglePayListenerEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isGooglePayListenerEnabled(),
             isIncomeTrackingEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isIncomeTrackingEnabled(),
-            isSearchEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSearchEnabled(),
             isSubscriptionEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSubscriptionEnabled(),
             isMultiAccountEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isMultiAccountEnabled(),
             isModern3DUiEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isModern3DUiEnabled(),
@@ -346,15 +352,17 @@ class DebitViewModel(
         color: AppThemeColor,
         language: AppLanguage,
         betaTestingEnabled: Boolean,
-        incomeTrackingEnabled: Boolean,
-        searchEnabled: Boolean,
-        subscriptionEnabled: Boolean,
-        multiAccountEnabled: Boolean,
-        modern3DUiEnabled: Boolean,
-        dragDateReorderEnabled: Boolean,
-        autoBackupEnabled: Boolean
+        googlePayListenerEnabled: Boolean = false,
+        incomeTrackingEnabled: Boolean = true,
+        searchEnabled: Boolean = true,
+        subscriptionEnabled: Boolean = true,
+        multiAccountEnabled: Boolean = true,
+        modern3DUiEnabled: Boolean = true,
+        dragDateReorderEnabled: Boolean = true,
+        autoBackupEnabled: Boolean = true
     ) {
         viewModelScope.launch {
+            val effGooglePay = betaTestingEnabled && googlePayListenerEnabled
             val effIncome = betaTestingEnabled && incomeTrackingEnabled
             val effSearch = betaTestingEnabled && searchEnabled
             val effSub = betaTestingEnabled && subscriptionEnabled
@@ -365,6 +373,7 @@ class DebitViewModel(
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
             settingsPrefs.setBetaTestingEnabled(betaTestingEnabled)
+            settingsPrefs.setGooglePayListenerEnabled(effGooglePay)
             settingsPrefs.setIncomeTrackingEnabled(effIncome)
             settingsPrefs.setSearchEnabled(effSearch)
             settingsPrefs.setSubscriptionEnabled(effSub)
@@ -376,6 +385,7 @@ class DebitViewModel(
             _themeColor.value = color
             _appLanguage.value = language
             _betaTestingEnabled.value = betaTestingEnabled
+            _googlePayListenerEnabled.value = effGooglePay
             _incomeTrackingEnabled.value = effIncome
             _searchEnabled.value = effSearch
             _subscriptionEnabled.value = effSub
@@ -524,6 +534,13 @@ class DebitViewModel(
         viewModelScope.launch {
             settingsPrefs.setBetaTestingEnabled(enabled)
             _betaTestingEnabled.value = enabled
+        }
+    }
+
+    fun setGooglePayListenerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setGooglePayListenerEnabled(enabled)
+            _googlePayListenerEnabled.value = enabled
         }
     }
 

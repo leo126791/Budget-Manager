@@ -84,6 +84,9 @@ class SettingsPreferences(context: Context) {
     fun isMultiAccountEnabled(): Boolean = prefs.getBoolean("multi_account", true)
     fun setMultiAccountEnabled(enabled: Boolean) = prefs.edit().putBoolean("multi_account", enabled).apply()
 
+    fun isGooglePayListenerEnabled(): Boolean = prefs.getBoolean("google_pay_listener", false)
+    fun setGooglePayListenerEnabled(enabled: Boolean) = prefs.edit().putBoolean("google_pay_listener", enabled).apply()
+
     fun isModern3DUiEnabled(): Boolean = prefs.getBoolean("modern_3d_ui", true)
     fun setModern3DUiEnabled(enabled: Boolean) = prefs.edit().putBoolean("modern_3d_ui", enabled).apply()
 

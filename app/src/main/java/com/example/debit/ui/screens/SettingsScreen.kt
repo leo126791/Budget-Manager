@@ -62,6 +62,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.provider.Settings
+import android.widget.Toast
+import com.example.debit.service.PaymentNotificationListenerService
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
 import com.example.debit.ui.utils.AppStrings
@@ -77,6 +82,7 @@ fun SettingsScreen(
     currentThemeColor: AppThemeColor,
     currentLanguage: AppLanguage,
     currentBetaTestingEnabled: Boolean,
+    currentGooglePayListenerEnabled: Boolean = false,
     currentIncomeTrackingEnabled: Boolean = true,
     currentSearchEnabled: Boolean = true,
     currentSubscriptionEnabled: Boolean = true,
@@ -91,6 +97,7 @@ fun SettingsScreen(
         themeColor: AppThemeColor,
         language: AppLanguage,
         betaTestingEnabled: Boolean,
+        googlePayListenerEnabled: Boolean,
         incomeTrackingEnabled: Boolean,
         searchEnabled: Boolean,
         subscriptionEnabled: Boolean,
@@ -105,6 +112,8 @@ fun SettingsScreen(
     onReplayOnboarding: () -> Unit = {},
     onDismissRequest: () -> Unit
 ) {
+    val context = LocalContext.current
+
     if (!isEmbedded) {
         BackHandler {
             onDismissRequest()
@@ -117,6 +126,7 @@ fun SettingsScreen(
     var selectedColor by remember { mutableStateOf(currentThemeColor) }
     var selectedLanguage by remember { mutableStateOf(currentLanguage) }
     var betaTestingState by remember { mutableStateOf(currentBetaTestingEnabled) }
+    var googlePayListenerState by remember { mutableStateOf(currentGooglePayListenerEnabled) }
     var incomeTrackingState by remember { mutableStateOf(currentIncomeTrackingEnabled) }
     var searchState by remember { mutableStateOf(currentSearchEnabled) }
     var subscriptionState by remember { mutableStateOf(currentSubscriptionEnabled) }
@@ -132,6 +142,7 @@ fun SettingsScreen(
         color: AppThemeColor = selectedColor,
         lang: AppLanguage = selectedLanguage,
         beta: Boolean = betaTestingState,
+        gPay: Boolean = googlePayListenerState,
         income: Boolean = incomeTrackingState,
         search: Boolean = searchState,
         sub: Boolean = subscriptionState,
@@ -146,6 +157,7 @@ fun SettingsScreen(
             color,
             lang,
             beta,
+            gPay,
             income,
             search,
             sub,
@@ -180,6 +192,16 @@ fun SettingsScreen(
                 triggerAutoSave(
                     beta = newBeta
                 )
+            },
+            googlePayListenerState = googlePayListenerState,
+            onGooglePayListenerChange = { newGPay ->
+                googlePayListenerState = newGPay
+                triggerAutoSave(gPay = newGPay)
+                if (newGPay && !PaymentNotificationListenerService.isPermissionGranted(context)) {
+                    val promptMsg = if (isZh) "請在系統設定中開啟「通知存取」權限，以自動捕捉 Google Pay 消費！" else "Please enable Notification Access permission to auto-capture Google Pay!"
+                    Toast.makeText(context, promptMsg, Toast.LENGTH_LONG).show()
+                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }
             },
             incomeTrackingState = incomeTrackingState,
             onIncomeTrackingChange = { newIncome ->
@@ -284,6 +306,8 @@ private fun SettingsBodyList(
     onLanguageSelect: (AppLanguage) -> Unit,
     betaTestingState: Boolean,
     onBetaTestingChange: (Boolean) -> Unit,
+    googlePayListenerState: Boolean,
+    onGooglePayListenerChange: (Boolean) -> Unit,
     incomeTrackingState: Boolean,
     onIncomeTrackingChange: (Boolean) -> Unit,
     searchState: Boolean,
@@ -501,6 +525,33 @@ private fun SettingsBodyList(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            // 0. Google Pay Auto-Tracking
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isZh) "💳 Google Pay 消費自動記帳" else "💳 Google Pay Auto-Tracking",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = if (isZh) "讀取 Google Pay 扣款通知並自動寫入記帳" else "Auto-capture Google Pay notifications",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Switch(
+                                    checked = googlePayListenerState,
+                                    onCheckedChange = onGooglePayListenerChange
+                                )
+                            }
+
+                            HorizontalDivider()
+
                             // 1. Income Tracking
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
