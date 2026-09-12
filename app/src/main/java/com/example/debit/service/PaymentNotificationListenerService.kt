@@ -7,6 +7,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import android.widget.Toast
 import com.example.debit.data.AppDatabase
 import com.example.debit.data.AppLanguage
@@ -35,31 +36,57 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val context = applicationContext
         val settingsPrefs = SettingsPreferences(context)
-        if (!settingsPrefs.isBetaTestingEnabled() || !settingsPrefs.isGooglePayListenerEnabled()) {
+        val betaOn = settingsPrefs.isBetaTestingEnabled()
+        val gpayOn = settingsPrefs.isGooglePayListenerEnabled()
+        val packageName = sbn.packageName ?: ""
+
+        val extras = sbn.notification?.extras ?: return
+
+        fun getStr(key: String): String {
+            return try {
+                extras.getCharSequence(key)?.toString() ?: ""
+            } catch (_: Exception) {
+                ""
+            }
+        }
+
+        val title = getStr("android.title")
+        val text = getStr("android.text")
+        val bigText = getStr("android.bigText")
+        val subText = getStr("android.subText")
+        val titleBig = getStr("android.title.big")
+        val summaryText = getStr("android.summaryText")
+
+        val combined = "$title $text $bigText $subText $titleBig $summaryText".trim()
+
+        Log.d("PaymentService", "Notification received from pkg: $packageName | combined: '$combined' | title: '$title' | text: '$text' | betaOn=$betaOn, gpayOn=$gpayOn")
+
+        if (!betaOn || !gpayOn) {
+            Log.d("PaymentService", "Feature disabled in settings. Skipping.")
             return
         }
 
-        val packageName = sbn.packageName ?: ""
-        val extras = sbn.notification?.extras ?: return
-
-        val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
-        val combined = "$title $text $bigText"
-
-        val isWalletPkg = packageName.contains("wallet") || packageName.contains("gpay") || packageName.contains("pay")
+        val isWalletPkg = packageName.contains("wallet") || packageName.contains("gpay") || packageName.contains("pay") || packageName.contains("shell")
         val isPaymentContent = combined.contains("Google Pay") || combined.contains("Google Wallet") ||
                 combined.contains("消費") || combined.contains("付款") || combined.contains("刷卡") ||
                 combined.contains("交易") || combined.contains("NT$") || combined.contains("TWD")
 
-        if (!isWalletPkg && !isPaymentContent) return
+        if (!isWalletPkg && !isPaymentContent) {
+            Log.d("PaymentService", "Notification content or package does not match payment rules. Skipping.")
+            return
+        }
 
-        val amount = extractAmount(combined) ?: return
-        if (amount <= 0.0) return
+        val amount = extractAmount(combined)
+        if (amount == null || amount <= 0.0) {
+            Log.d("PaymentService", "Could not extract valid amount from: '$combined'. Skipping.")
+            return
+        }
 
         val merchantName = extractMerchant(title, text)
         val category = inferCategory(combined, merchantName)
         val isZh = settingsPrefs.getLanguage() == AppLanguage.ZH
+
+        Log.d("PaymentService", "Successfully parsed payment! Amount: $amount, Merchant: '$merchantName', Category: $category")
 
         val transactionNote = if (merchantName.isNotBlank()) {
             if (isZh) "Google Pay • $merchantName" else "Google Pay • $merchantName"
