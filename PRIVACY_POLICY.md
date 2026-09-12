@@ -1,6 +1,6 @@
 # Budget Manager 記帳管家 - 隱私權政策 (Privacy Policy)
 
-**生效與最後更新日期：2026 年 9 月 9 日**
+**生效與最後更新日期：2026 年 9 月 12 日**
 
 歡迎使用 **Budget Manager 記帳管家**（以下簡稱「本應用程式」或「我們」）。我們非常重視您的個人隱私與資料安全。本隱私權政策旨在詳細說明本應用程式如何收集、使用、儲存、維護與保護您的資訊，以及您對自身資料所擁有的控制權利。
 
@@ -17,10 +17,13 @@ Budget Manager 是一款**以個人隱私保護為核心設計的 100% 本地運
 ### 二、 系統權限與用途說明 (System Permissions)
 
 為了提供特定功能，本應用程式僅會在您主動使用該功能時請求以下系統權限：
-1. **位置權限 (`ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`)**：
+1. **通知存取權限 (`BIND_NOTIFICATION_LISTENER_SERVICE`)**：
+   * **用途**：僅用於您主動開啟 Beta 實驗性功能「Google Pay 消費自動記帳」時，由手機裝置本機端監聽傳入之 Google Pay / Google Wallet 支付扣款通知，自動解析消費金額與店家名稱並記錄至您的本地帳本。
+   * **處理方式**：通知內容之讀取與解析完全於您的**手機裝置端**進行，絕不備份、傳輸或分享至任何外部伺服器或第三方。
+2. **位置權限 (`ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`)**：
    * **用途**：僅用於您記帳時主動點擊「GPS 定位」或啟用「地點自動預測」時，由手機裝置端比對您當前附近的消費店家或地點名稱，以省去手動輸入時間。
    * **處理方式**：地點資訊完全於您的**手機裝置端**進行計算與比對，絕不傳輸至任何外部伺服器或第三方。
-2. **存取儲存空間/文件選擇器**：
+3. **存取儲存空間/文件選擇器**：
    * **用途**：僅用於您主動點擊「匯出 CSV 財務報表」或選擇本地備份檔案進行資料還原。
 
 ---
@@ -86,7 +89,7 @@ Budget Manager 是一款**以個人隱私保護為核心設計的 100% 本地運
 
 # Privacy Policy for Budget Manager
 
-**Effective and Last Updated: September 9, 2026**
+**Effective and Last Updated: September 12, 2026**
 
 Welcome to **Budget Manager** ("we", "our", or "us"). We are committed to protecting your personal privacy and data security. This Privacy Policy explains how our application handles information, system permissions, data retention, and your rights.
 
@@ -94,6 +97,7 @@ Welcome to **Budget Manager** ("we", "our", or "us"). We are committed to protec
 Budget Manager is a local offline budget and expense tracking application designed with privacy-first principles. We do not collect, transmit, store, or share any of your personal financial records, transaction notes, or budget targets on external servers. We do not use third-party advertising SDKs or analytics tracking IDs.
 
 ### 2. System Permissions
+- **Notification Access Permission (`BIND_NOTIFICATION_LISTENER_SERVICE`)**: Used solely on-device when you enable the "Google Pay Auto-Tracking" beta feature to read incoming Google Pay / Google Wallet payment notifications and automatically log transaction amounts and merchant names locally. All notification parsing is performed strictly on-device and is never uploaded or shared.
 - **Location Permission (`ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`)**: Used solely on-device to auto-predict or fill location/merchant names when you tap the GPS button while adding a transaction. Location data is processed strictly on-device and is never sent to external servers.
 - **Storage/File Access**: Used solely when you manually export CSV financial reports or select a local backup file for restoration.
 
