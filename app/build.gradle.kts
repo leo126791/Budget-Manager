@@ -14,8 +14,8 @@ android {
         applicationId = "com.budgetmanager.debit.app"
         minSdk = 24
         targetSdk = 37
-        versionCode = 9
-        versionName = "1.0.4"
+        versionCode = 10
+        versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
