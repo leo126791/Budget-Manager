@@ -4,6 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -38,16 +45,26 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: DebitViewModel = viewModel(factory = viewModelFactory)
             val uiState by viewModel.uiState.collectAsState()
+            val isInitialized by viewModel.isInitialized.collectAsState()
 
             DebitTheme(themeColor = uiState.themeColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (!uiState.isInitialized) {
-                        OnboardingScreen(viewModel = viewModel)
-                    } else {
-                        DashboardScreen(viewModel = viewModel)
+                    AnimatedContent(
+                        targetState = isInitialized,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(400)) + slideInVertically { it / 4 }) togetherWith
+                                    (fadeOut(animationSpec = tween(400)) + slideOutVertically { -it / 4 })
+                        },
+                        label = "MainScreenTransition"
+                    ) { initialized ->
+                        if (!initialized) {
+                            OnboardingScreen(viewModel = viewModel)
+                        } else {
+                            DashboardScreen(viewModel = viewModel)
+                        }
                     }
                 }
             }

@@ -1,7 +1,15 @@
 package com.example.debit.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -26,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,7 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -48,28 +60,26 @@ import java.util.Date
 import java.util.Locale
 
 val pieChartColors = listOf(
-    Color(0xFFFF5722), // Deep Orange
-    Color(0xFF2196F3), // Blue
-    Color(0xFFFFEB3B), // Yellow
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF4CAF50), // Green
-    Color(0xFFE91E63), // Pink
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFFFF9800), // Orange
-    Color(0xFF607D8B)  // Blue Grey
+    Color(0xFF4F46E5), // Indigo
+    Color(0xFF0EA5E9), // Teal
+    Color(0xFF10B981), // Emerald
+    Color(0xFFF59E0B), // Amber
+    Color(0xFFEC4899), // Pink
+    Color(0xFF8B5CF6), // Purple
+    Color(0xFF6366F1), // Violet
+    Color(0xFF64748B)  // Slate
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpensePieChartCard(
     categoryExpenses: Map<String, Double>,
     totalExpense: Double,
-    modifier: Modifier = Modifier,
-    transactions: List<Transaction> = emptyList(),
-    totalBudget: Double = 0.0,
-    language: AppLanguage = AppLanguage.ZH
+    totalBudget: Double,
+    transactions: List<Transaction>,
+    language: AppLanguage,
+    modifier: Modifier = Modifier
 ) {
-    if ((totalExpense <= 0 && totalBudget <= 0) || (categoryExpenses.isEmpty() && totalBudget <= 0)) return
-
     var selectedChartIndex by remember { mutableIntStateOf(0) }
 
     Card(
@@ -100,19 +110,33 @@ fun ExpensePieChartCard(
                 }
             }
 
-            if (selectedChartIndex == 0) {
-                DonutChartContent(
-                    categoryExpenses = categoryExpenses,
-                    totalExpense = totalExpense,
-                    totalBudget = totalBudget,
-                    language = language
-                )
-            } else {
-                DailyUsageChartContent(
-                    transactions = transactions,
-                    totalExpense = totalExpense,
-                    language = language
-                )
+            AnimatedContent(
+                targetState = selectedChartIndex,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (slideInHorizontally { width -> width / 3 } + fadeIn(tween(250))) togetherWith
+                                (slideOutHorizontally { width -> -width / 3 } + fadeOut(tween(250)))
+                    } else {
+                        (slideInHorizontally { width -> -width / 3 } + fadeIn(tween(250))) togetherWith
+                                (slideOutHorizontally { width -> width / 3 } + fadeOut(tween(250)))
+                    }.using(SizeTransform(clip = false))
+                },
+                label = "ChartSwitchAnimation"
+            ) { chartIndex ->
+                if (chartIndex == 0) {
+                    DonutChartContent(
+                        categoryExpenses = categoryExpenses,
+                        totalExpense = totalExpense,
+                        totalBudget = totalBudget,
+                        language = language
+                    )
+                } else {
+                    DailyUsageChartContent(
+                        transactions = transactions,
+                        totalExpense = totalExpense,
+                        language = language
+                    )
+                }
             }
         }
     }
@@ -198,37 +222,39 @@ private fun DonutChartContent(
                     )
                     Text(
                         text = "$${String.format(Locale.getDefault(), "%,.0f", totalExpense)}",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
         }
 
-        // Legend Items Column
+        // Category Legend
         Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(start = 12.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.animateContentSize()
         ) {
-            sortedEntries.take(4).forEachIndexed { index, entry ->
+            sortedEntries.take(5).forEachIndexed { index, entry ->
                 val color = pieChartColors[index % pieChartColors.size]
-                val percentage = ((entry.value / baseAmount) * 100).toInt()
+                val percent = if (totalExpense > 0) ((entry.value / totalExpense) * 100).toInt() else 0
                 val catName = AppStrings.getCategoryName(entry.key, language)
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(10.dp)
                             .background(color, CircleShape)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "$catName ($percentage%)",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "$catName $percent%",
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "$${String.format(Locale.getDefault(), "%,.0f", entry.value)}",
+                        text = "($${String.format(Locale.getDefault(), "%,.0f", entry.value)})",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -236,23 +262,23 @@ private fun DonutChartContent(
             }
 
             if (totalBudget > 0 && remainingBudget > 0) {
-                val remainingPercent = ((remainingBudget / totalBudget) * 100).toInt()
                 val unusedLabel = AppStrings.get("unused_budget", language)
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(10.dp)
                             .background(trackColor, CircleShape)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "$unusedLabel ($remainingPercent%)",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = unusedLabel,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "$${String.format(Locale.getDefault(), "%,.0f", remainingBudget)}",
+                        text = "($${String.format(Locale.getDefault(), "%,.0f", remainingBudget)})",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -269,8 +295,8 @@ private fun DailyUsageChartContent(
     language: AppLanguage
 ) {
     val calendar = Calendar.getInstance()
-    val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val today = calendar.get(Calendar.DAY_OF_MONTH)
+    val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val currentYM = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
 
     val dailyMap = mutableMapOf<Int, Double>()
@@ -376,6 +402,227 @@ private fun DailyUsageChartContent(
             Text("${dayUnitLabel}10", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("${dayUnitLabel}20", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("${dayUnitLabel}${daysInMonth}", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExpenseTrendLineChartCard(
+    transactions: List<Transaction>,
+    language: AppLanguage,
+    modifier: Modifier = Modifier
+) {
+    var isMonthlyMode by remember { mutableStateOf(false) }
+    val isZh = language == AppLanguage.ZH
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isZh) "📈 消費走勢動態折線圖" else "📈 Expense Trend Chart",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(
+                        selected = !isMonthlyMode,
+                        onClick = { isMonthlyMode = false },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text(if (isZh) "日趨勢" else "Daily", fontSize = 12.sp)
+                    }
+                    SegmentedButton(
+                        selected = isMonthlyMode,
+                        onClick = { isMonthlyMode = true },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(if (isZh) "月趨勢" else "Monthly", fontSize = 12.sp)
+                    }
+                }
+            }
+
+            if (transactions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isZh) "尚無消費數據可繪製折線圖" else "No expense data for trend chart",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val calendar = Calendar.getInstance()
+                val currentYear = calendar.get(Calendar.YEAR)
+                val currentMonth = calendar.get(Calendar.MONTH)
+                val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+                // Map data points
+                val dataPoints: List<Pair<String, Double>> = if (!isMonthlyMode) {
+                    val dailyMap = mutableMapOf<Int, Double>()
+                    for (d in 1..daysInMonth) dailyMap[d] = 0.0
+
+                    transactions.forEach { tx ->
+                        val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
+                        if (calTx.get(Calendar.YEAR) == currentYear && calTx.get(Calendar.MONTH) == currentMonth) {
+                            val day = calTx.get(Calendar.DAY_OF_MONTH)
+                            dailyMap[day] = (dailyMap[day] ?: 0.0) + tx.amount
+                        }
+                    }
+                    dailyMap.entries.map { "${it.key}日" to it.value }
+                } else {
+                    val monthlyMap = mutableMapOf<String, Double>()
+                    val ymFormat = SimpleDateFormat("yyyy/MM", Locale.getDefault())
+                    for (i in 5 downTo 0) {
+                        val calPast = Calendar.getInstance().apply {
+                            add(Calendar.MONTH, -i)
+                        }
+                        monthlyMap[ymFormat.format(calPast.time)] = 0.0
+                    }
+                    transactions.forEach { tx ->
+                        val ym = ymFormat.format(Date(tx.date))
+                        if (monthlyMap.containsKey(ym)) {
+                            monthlyMap[ym] = (monthlyMap[ym] ?: 0.0) + tx.amount
+                        }
+                    }
+                    monthlyMap.entries.map { (ym, amount) ->
+                        val monthLabel = ym.takeLast(2) + "月"
+                        monthLabel to amount
+                    }
+                }
+
+                val maxVal = maxOf(10.0, dataPoints.maxOfOrNull { it.second } ?: 10.0)
+                val avgVal = if (dataPoints.isNotEmpty()) dataPoints.map { it.second }.average() else 0.0
+                val peakPoint = dataPoints.maxByOrNull { it.second }
+
+                val primaryColor = MaterialTheme.colorScheme.primary
+                val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+
+                val animProgress = remember { Animatable(0f) }
+                LaunchedEffect(isMonthlyMode, transactions) {
+                    animProgress.animateTo(1f, animationSpec = tween(700))
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (isZh) "最高支出: $${String.format(Locale.getDefault(), "%,.0f", maxVal)} (${peakPoint?.first ?: ""})" else "Peak: $${String.format(Locale.getDefault(), "%,.0f", maxVal)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isZh) "平均: $${String.format(Locale.getDefault(), "%,.0f", avgVal)}" else "Avg: $${String.format(Locale.getDefault(), "%,.0f", avgVal)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                    ) {
+                        val w = size.width
+                        val h = size.height
+                        val pad = 16.dp.toPx()
+                        val chartW = w - pad * 2
+                        val chartH = h - pad * 2
+
+                        // Grid horizontal lines
+                        for (i in 0..3) {
+                            val yLine = pad + (chartH / 3f) * i
+                            drawLine(
+                                color = gridColor,
+                                start = Offset(pad, yLine),
+                                end = Offset(w - pad, yLine),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
+
+                        if (dataPoints.size > 1) {
+                            val stepX = chartW / (dataPoints.size - 1)
+                            val points = dataPoints.mapIndexed { idx, pair ->
+                                val x = pad + idx * stepX
+                                val normalizedY = (pair.second / maxVal).toFloat().coerceIn(0f, 1f)
+                                val y = pad + chartH * (1f - normalizedY * animProgress.value)
+                                Offset(x, y)
+                            }
+
+                            val linePath = Path().apply {
+                                moveTo(points.first().x, points.first().y)
+                                for (i in 0 until points.size - 1) {
+                                    val p1 = points[i]
+                                    val p2 = points[i + 1]
+                                    val cx1 = (p1.x + p2.x) / 2f
+                                    val cy1 = p1.y
+                                    val cx2 = (p1.x + p2.x) / 2f
+                                    val cy2 = p2.y
+                                    cubicTo(cx1, cy1, cx2, cy2, p2.x, p2.y)
+                                }
+                            }
+
+                            val fillPath = Path().apply {
+                                addPath(linePath)
+                                lineTo(points.last().x, pad + chartH)
+                                lineTo(points.first().x, pad + chartH)
+                                close()
+                            }
+
+                            drawPath(
+                                path = fillPath,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(primaryColor.copy(alpha = 0.35f), Color.Transparent),
+                                    startY = pad,
+                                    endY = pad + chartH
+                                )
+                            )
+
+                            drawPath(
+                                path = linePath,
+                                color = primaryColor,
+                                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                            )
+
+                            points.forEachIndexed { idx, pt ->
+                                val valAmount = dataPoints[idx].second
+                                if (valAmount > 0) {
+                                    drawCircle(
+                                        color = primaryColor,
+                                        radius = 4.dp.toPx(),
+                                        center = pt
+                                    )
+                                    drawCircle(
+                                        color = Color.White,
+                                        radius = 2.dp.toPx(),
+                                        center = pt
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -72,14 +72,6 @@ class SettingsPreferences(context: Context) {
         prefs.edit().putBoolean("beta_testing", enabled).apply()
     }
 
-    fun isLivingExpensePoolEnabled(): Boolean {
-        return prefs.getBoolean("living_expense_pool", false)
-    }
-
-    fun setLivingExpensePoolEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("living_expense_pool", enabled).apply()
-    }
-
     fun isIncomeTrackingEnabled(): Boolean = prefs.getBoolean("income_tracking", true)
     fun setIncomeTrackingEnabled(enabled: Boolean) = prefs.edit().putBoolean("income_tracking", enabled).apply()
 
@@ -91,9 +83,6 @@ class SettingsPreferences(context: Context) {
 
     fun isMultiAccountEnabled(): Boolean = prefs.getBoolean("multi_account", true)
     fun setMultiAccountEnabled(enabled: Boolean) = prefs.edit().putBoolean("multi_account", enabled).apply()
-
-    fun isSavingsGoalsEnabled(): Boolean = prefs.getBoolean("savings_goals", true)
-    fun setSavingsGoalsEnabled(enabled: Boolean) = prefs.edit().putBoolean("savings_goals", enabled).apply()
 
     fun isModern3DUiEnabled(): Boolean = prefs.getBoolean("modern_3d_ui", true)
     fun setModern3DUiEnabled(enabled: Boolean) = prefs.edit().putBoolean("modern_3d_ui", enabled).apply()

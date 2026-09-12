@@ -46,7 +46,6 @@ class QuickAddActivity : ComponentActivity() {
                                         note = note,
                                         date = date,
                                         locationName = locationName,
-                                        deductFromPool = deductFromPool,
                                         accountName = accountName
                                     )
                                 )

@@ -314,21 +314,6 @@ fun MonthlyBreakdownDialog(
                                                                     text = AppStrings.getCategoryName(tx.category, language),
                                                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                                                                 )
-                                                                if (tx.deductFromPool) {
-                                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                                    Surface(
-                                                                        shape = RoundedCornerShape(6.dp),
-                                                                        color = MaterialTheme.colorScheme.tertiaryContainer
-                                                                    ) {
-                                                                        Text(
-                                                                            text = if (isZh) "💰 生活費" else "💰 Pool",
-                                                                            style = MaterialTheme.typography.labelSmall,
-                                                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                                                            fontSize = 10.sp,
-                                                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                                                        )
-                                                                    }
-                                                                }
                                                             }
 
                                                             val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tx.date))

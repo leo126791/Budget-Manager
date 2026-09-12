@@ -89,9 +89,7 @@ val defaultLocations = listOf("7-11", "全家", "麥當勞", "星巴克", "全�
 fun AddTransactionDialog(
     initialTransaction: Transaction? = null,
     language: AppLanguage = AppLanguage.ZH,
-    isLivingExpensePoolEnabled: Boolean = false,
-    livingExpensePoolAmount: Double = 0.0,
-    isIncomeTrackingEnabled: Boolean = true,
+    isIncomeTrackingEnabled: Boolean = false,
     isMultiAccountEnabled: Boolean = true,
     locationPredictionEnabled: Boolean = false,
     recentLocations: List<String> = emptyList(),
@@ -110,7 +108,6 @@ fun AddTransactionDialog(
     var accountName by remember {
         mutableStateOf(initialTransaction?.accountName ?: "現金")
     }
-    var deductFromPool by remember { mutableStateOf(initialTransaction?.deductFromPool ?: false) }
 
     var amountText by remember {
         mutableStateOf(
@@ -478,46 +475,6 @@ fun AddTransactionDialog(
                     }
                 }
 
-                // Budget Source Selection for Living Expense Pool
-                if (isLivingExpensePoolEnabled) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = if (isZh) "扣款預算來源" else "Deduct From Budget",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            val poolFormatted = if (livingExpensePoolAmount < 0)
-                                "-$${String.format(Locale.getDefault(), "%,.0f", -livingExpensePoolAmount)}"
-                            else
-                                "$${String.format(Locale.getDefault(), "%,.0f", livingExpensePoolAmount)}"
-                            FilterChip(
-                                selected = !deductFromPool,
-                                onClick = { deductFromPool = false },
-                                label = {
-                                    Text(if (isZh) "🏢 本月預算" else "Monthly Budget", fontSize = 12.sp)
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            FilterChip(
-                                selected = deductFromPool,
-                                onClick = { deductFromPool = true },
-                                label = {
-                                    Text(if (isZh) "💰 生活費池 ($poolFormatted)" else "Pool ($poolFormatted)", fontSize = 12.sp)
-                                },
-                                modifier = Modifier.weight(1.1f),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (livingExpensePoolAmount < 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = if (livingExpensePoolAmount < 0) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            )
-                        }
-                    }
-                }
-
                 // Note Text Field
                 OutlinedTextField(
                     value = note,
@@ -541,7 +498,7 @@ fun AddTransactionDialog(
                                 finalNote = if (finalNote.isBlank()) selectedSubCategory!! else "${selectedSubCategory!!} • $finalNote"
                             }
                         }
-                        onConfirm(amount, category, finalNote, selectedDateMillis, locationName.trim(), deductFromPool, accountName, transactionType)
+                        onConfirm(amount, category, finalNote, selectedDateMillis, locationName.trim(), false, accountName, transactionType)
                         onDismissRequest()
                     }
                 }

@@ -608,22 +608,6 @@ fun Modern3DTransactionItem(
                                 text = localizedCategory,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                             )
-                            if (transaction.deductFromPool) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    shape = OrganicShapeChip,
-                                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                                    shadowElevation = 2.dp
-                                ) {
-                                    Text(
-                                        text = if (language == AppLanguage.ZH) "💰 生活費" else "💰 Pool",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                        fontSize = 10.sp,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
                             if (transaction.accountName.isNotBlank() && transaction.accountName != "現金") {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(

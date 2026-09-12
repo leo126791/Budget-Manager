@@ -9,7 +9,6 @@ import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
 import com.example.debit.data.Budget
 import com.example.debit.data.DebitRepository
-import com.example.debit.data.SavingsGoal
 import com.example.debit.data.SettingsPreferences
 import com.example.debit.data.Subscription
 import com.example.debit.data.Transaction
@@ -34,8 +33,7 @@ import java.util.Locale
 private data class DataTuple(
     val transactions: List<Transaction>,
     val globalBudget: Budget?,
-    val subscriptions: List<Subscription>,
-    val savingsGoals: List<SavingsGoal>
+    val subscriptions: List<Subscription>
 )
 
 private data class PrefsTuple(
@@ -62,15 +60,11 @@ data class DebitUiState(
     val searchQuery: String = "",
     val subscriptions: List<Subscription> = emptyList(),
     val totalSubscriptionsMonthly: Double = 0.0,
-    val savingsGoals: List<SavingsGoal> = emptyList(),
     val isBetaTestingEnabled: Boolean = false,
-    val isLivingExpensePoolEnabled: Boolean = false,
-    val livingExpensePool: Double = 0.0,
     val isIncomeTrackingEnabled: Boolean = true,
     val isSearchEnabled: Boolean = true,
     val isSubscriptionEnabled: Boolean = true,
     val isMultiAccountEnabled: Boolean = true,
-    val isSavingsGoalsEnabled: Boolean = true,
     val isModern3DUiEnabled: Boolean = true,
     val isDragDateReorderEnabled: Boolean = true,
     val autoBackupEnabled: Boolean = true,
@@ -115,14 +109,10 @@ class DebitViewModel(
     private val _betaTestingEnabled = MutableStateFlow(settingsPrefs.isBetaTestingEnabled())
     val betaTestingEnabled: StateFlow<Boolean> = _betaTestingEnabled
 
-    private val _livingExpensePoolEnabled = MutableStateFlow(settingsPrefs.isLivingExpensePoolEnabled())
-    val livingExpensePoolEnabled: StateFlow<Boolean> = _livingExpensePoolEnabled
-
     private val _incomeTrackingEnabled = MutableStateFlow(settingsPrefs.isIncomeTrackingEnabled())
     private val _searchEnabled = MutableStateFlow(settingsPrefs.isSearchEnabled())
     private val _subscriptionEnabled = MutableStateFlow(settingsPrefs.isSubscriptionEnabled())
     private val _multiAccountEnabled = MutableStateFlow(settingsPrefs.isMultiAccountEnabled())
-    private val _savingsGoalsEnabled = MutableStateFlow(settingsPrefs.isSavingsGoalsEnabled())
     private val _modern3DUiEnabled = MutableStateFlow(settingsPrefs.isModern3DUiEnabled())
     private val _dragDateReorderEnabled = MutableStateFlow(settingsPrefs.isDragDateReorderEnabled())
 
@@ -135,14 +125,65 @@ class DebitViewModel(
     private val _isInitialized = MutableStateFlow(settingsPrefs.isInitialized())
     val isInitialized: StateFlow<Boolean> = _isInitialized
 
+    init {
+        viewModelScope.launch {
+            combine(repository.allSubscriptions, repository.allTransactions) { subs, txs ->
+                subs to txs
+            }.collect { (subs, txs) ->
+                checkAndApplyDueSubscriptions(subs, txs)
+            }
+        }
+    }
+
+    private fun checkAndApplyDueSubscriptions(subscriptions: List<Subscription>, transactions: List<Transaction>) {
+        if (subscriptions.isEmpty()) return
+        val calNow = Calendar.getInstance()
+        val currentYear = calNow.get(Calendar.YEAR)
+        val currentMonth = calNow.get(Calendar.MONTH) + 1
+        val currentDay = calNow.get(Calendar.DAY_OF_MONTH)
+
+        viewModelScope.launch {
+            subscriptions.forEach { sub ->
+                val isDueToday = if (sub.isAnnual) {
+                    sub.billingMonth == currentMonth && sub.billingDay == currentDay
+                } else {
+                    sub.billingDay == currentDay
+                }
+
+                if (isDueToday) {
+                    val alreadyBilled = transactions.any { tx ->
+                        val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
+                        val isSameDay = calTx.get(Calendar.YEAR) == currentYear &&
+                                calTx.get(Calendar.MONTH) + 1 == currentMonth &&
+                                calTx.get(Calendar.DAY_OF_MONTH) == currentDay
+                        isSameDay && (tx.note.contains(sub.name) || tx.note.contains("固定扣款"))
+                    }
+
+                    if (!alreadyBilled) {
+                        repository.addTransaction(
+                            Transaction(
+                                amount = sub.amount,
+                                category = "日常",
+                                note = "固定扣款: ${sub.name}",
+                                date = System.currentTimeMillis(),
+                                type = TransactionType.EXPENSE
+                            )
+                        )
+                        BudgetWidgetProvider.updateAllWidgets(getApplication())
+                        triggerAutoBackup()
+                    }
+                }
+            }
+        }
+    }
+
     val uiState: StateFlow<DebitUiState> = combine(
         combine(
             repository.allTransactions,
             repository.globalBudget,
-            repository.allSubscriptions,
-            repository.allSavingsGoals
-        ) { txs, budget, subs, goals ->
-            DataTuple(txs, budget, subs, goals)
+            repository.allSubscriptions
+        ) { txs, budget, subs ->
+            DataTuple(txs, budget, subs)
         },
         combine(
             _selectedYearMonth,
@@ -153,16 +194,14 @@ class DebitViewModel(
             PrefsTuple(ym, theme, lang, query)
         }
     ) { dataTuple, prefsTuple ->
-        val (transactions, globalBudget, subscriptions, savingsGoals) = dataTuple
+        val (transactions, globalBudget, subscriptions) = dataTuple
         val (selectedYM, themeColor, language, query) = prefsTuple
 
         val betaEnabled = _betaTestingEnabled.value
-        val poolEnabled = betaEnabled && _livingExpensePoolEnabled.value
         val incomeEnabled = betaEnabled && _incomeTrackingEnabled.value
         val searchEnabled = betaEnabled && _searchEnabled.value
         val subscriptionEnabled = betaEnabled && _subscriptionEnabled.value
         val multiAccountEnabled = betaEnabled && _multiAccountEnabled.value
-        val savingsGoalsEnabled = betaEnabled && _savingsGoalsEnabled.value
         val modern3DUiEnabled = betaEnabled && _modern3DUiEnabled.value
         val dragDateReorderEnabled = betaEnabled && _dragDateReorderEnabled.value
 
@@ -190,13 +229,7 @@ class DebitViewModel(
         var totalExp = 0.0
         var totalInc = 0.0
         var todayExp = 0.0
-        var pastDaysExpense = 0.0
-        var poolSpent = 0.0
         val catExpenses = mutableMapOf<String, Double>()
-
-        val calendar = Calendar.getInstance()
-        val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
-        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
 
         for (tx in currentMonthTransactions) {
             if (tx.type == TransactionType.INCOME) {
@@ -205,30 +238,17 @@ class DebitViewModel(
                 }
             } else {
                 catExpenses[tx.category] = (catExpenses[tx.category] ?: 0.0) + tx.amount
+                totalExp += tx.amount
 
-                if (tx.deductFromPool) {
-                    poolSpent += tx.amount
-                } else {
-                    totalExp += tx.amount
-
-                    val txDate = Date(tx.date)
-                    val txDayStr = DateFormatUtils.formatYMD(txDate)
-                    if (txDayStr == todayStr) {
-                        todayExp += tx.amount
-                    } else {
-                        val txCal = Calendar.getInstance().apply { time = txDate }
-                        if (txCal.get(Calendar.DAY_OF_MONTH) < currentDay) {
-                            pastDaysExpense += tx.amount
-                        }
-                    }
+                val txDate = Date(tx.date)
+                val txDayStr = DateFormatUtils.formatYMD(txDate)
+                if (txDayStr == todayStr) {
+                    todayExp += tx.amount
                 }
             }
         }
 
         val totalBgt = globalBudget?.amountLimit ?: 0.0
-        val dailyLimit = if (totalBgt > 0) totalBgt / daysInMonth else 0.0
-        val pastAllocated = maxOf(0, currentDay - 1) * dailyLimit
-        val poolAmount = if (poolEnabled && totalBgt > 0) (pastAllocated - pastDaysExpense - poolSpent) else 0.0
         val monthlySubs = subscriptions.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
 
         val monthsInDb = transactions.map {
@@ -253,15 +273,11 @@ class DebitViewModel(
             searchQuery = query,
             subscriptions = subscriptions,
             totalSubscriptionsMonthly = monthlySubs,
-            savingsGoals = savingsGoals,
             isBetaTestingEnabled = betaEnabled,
-            isLivingExpensePoolEnabled = poolEnabled,
-            livingExpensePool = poolAmount,
             isIncomeTrackingEnabled = incomeEnabled,
             isSearchEnabled = searchEnabled,
             isSubscriptionEnabled = subscriptionEnabled,
             isMultiAccountEnabled = multiAccountEnabled,
-            isSavingsGoalsEnabled = savingsGoalsEnabled,
             isModern3DUiEnabled = modern3DUiEnabled,
             isDragDateReorderEnabled = dragDateReorderEnabled,
             autoBackupEnabled = autoBackupOn,
@@ -276,12 +292,10 @@ class DebitViewModel(
             themeColor = settingsPrefs.getThemeColor(),
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
-            isLivingExpensePoolEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isLivingExpensePoolEnabled(),
             isIncomeTrackingEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isIncomeTrackingEnabled(),
             isSearchEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSearchEnabled(),
             isSubscriptionEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSubscriptionEnabled(),
             isMultiAccountEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isMultiAccountEnabled(),
-            isSavingsGoalsEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSavingsGoalsEnabled(),
             isModern3DUiEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isModern3DUiEnabled(),
             isDragDateReorderEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isDragDateReorderEnabled(),
             autoBackupEnabled = settingsPrefs.isAutoBackupEnabled(),
@@ -332,35 +346,29 @@ class DebitViewModel(
         color: AppThemeColor,
         language: AppLanguage,
         betaTestingEnabled: Boolean,
-        livingExpensePoolEnabled: Boolean,
         incomeTrackingEnabled: Boolean,
         searchEnabled: Boolean,
         subscriptionEnabled: Boolean,
         multiAccountEnabled: Boolean,
-        savingsGoalsEnabled: Boolean,
         modern3DUiEnabled: Boolean,
         dragDateReorderEnabled: Boolean,
         autoBackupEnabled: Boolean
     ) {
         viewModelScope.launch {
-            val effPool = betaTestingEnabled && livingExpensePoolEnabled
             val effIncome = betaTestingEnabled && incomeTrackingEnabled
             val effSearch = betaTestingEnabled && searchEnabled
             val effSub = betaTestingEnabled && subscriptionEnabled
             val effMultiAcc = betaTestingEnabled && multiAccountEnabled
-            val effSavings = betaTestingEnabled && savingsGoalsEnabled
             val effModern3D = betaTestingEnabled && modern3DUiEnabled
             val effDragDate = betaTestingEnabled && dragDateReorderEnabled
 
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
             settingsPrefs.setBetaTestingEnabled(betaTestingEnabled)
-            settingsPrefs.setLivingExpensePoolEnabled(effPool)
             settingsPrefs.setIncomeTrackingEnabled(effIncome)
             settingsPrefs.setSearchEnabled(effSearch)
             settingsPrefs.setSubscriptionEnabled(effSub)
             settingsPrefs.setMultiAccountEnabled(effMultiAcc)
-            settingsPrefs.setSavingsGoalsEnabled(effSavings)
             settingsPrefs.setModern3DUiEnabled(effModern3D)
             settingsPrefs.setDragDateReorderEnabled(effDragDate)
             settingsPrefs.setAutoBackupEnabled(autoBackupEnabled)
@@ -368,12 +376,10 @@ class DebitViewModel(
             _themeColor.value = color
             _appLanguage.value = language
             _betaTestingEnabled.value = betaTestingEnabled
-            _livingExpensePoolEnabled.value = effPool
             _incomeTrackingEnabled.value = effIncome
             _searchEnabled.value = effSearch
             _subscriptionEnabled.value = effSub
             _multiAccountEnabled.value = effMultiAcc
-            _savingsGoalsEnabled.value = effSavings
             _modern3DUiEnabled.value = effModern3D
             _dragDateReorderEnabled.value = effDragDate
             _autoBackupEnabled.value = autoBackupEnabled
@@ -477,25 +483,6 @@ class DebitViewModel(
         }
     }
 
-    fun addSavingsGoal(title: String, targetAmount: Double, initialAmount: Double) {
-        viewModelScope.launch {
-            repository.addSavingsGoal(SavingsGoal(title = title, targetAmount = targetAmount, currentAmount = initialAmount))
-        }
-    }
-
-    fun depositToSavingsGoal(savingsGoal: SavingsGoal, amount: Double) {
-        viewModelScope.launch {
-            val updated = savingsGoal.copy(currentAmount = savingsGoal.currentAmount + amount)
-            repository.updateSavingsGoal(updated)
-        }
-    }
-
-    fun deleteSavingsGoal(savingsGoal: SavingsGoal) {
-        viewModelScope.launch {
-            repository.deleteSavingsGoal(savingsGoal)
-        }
-    }
-
     fun getCustomSubCategories(category: String): List<String> {
         return settingsPrefs.getCustomSubCategories(category)
     }
@@ -540,13 +527,6 @@ class DebitViewModel(
         }
     }
 
-    fun setLivingExpensePoolEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsPrefs.setLivingExpensePoolEnabled(enabled)
-            _livingExpensePoolEnabled.value = enabled
-        }
-    }
-
     fun setIncomeTrackingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsPrefs.setIncomeTrackingEnabled(enabled)
@@ -572,13 +552,6 @@ class DebitViewModel(
         viewModelScope.launch {
             settingsPrefs.setMultiAccountEnabled(enabled)
             _multiAccountEnabled.value = enabled
-        }
-    }
-
-    fun setSavingsGoalsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsPrefs.setSavingsGoalsEnabled(enabled)
-            _savingsGoalsEnabled.value = enabled
         }
     }
 
@@ -622,6 +595,13 @@ class DebitViewModel(
             )
             BudgetWidgetProvider.updateAllWidgets(getApplication())
             triggerAutoBackup()
+        }
+    }
+
+    fun resetOnboarding() {
+        viewModelScope.launch {
+            settingsPrefs.setInitialized(false)
+            _isInitialized.value = false
         }
     }
 }
