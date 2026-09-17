@@ -25,20 +25,14 @@ class DailyReminderReceiver : BroadcastReceiver() {
         val settingsPrefs = SettingsPreferences(context)
 
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-            if (settingsPrefs.isDailyReminderEnabled()) {
-                val hour = settingsPrefs.getReminderHour()
-                val minute = settingsPrefs.getReminderMinute()
-                ReminderUtils.scheduleDailyReminder(context, hour, minute)
-            }
+            ReminderUtils.rescheduleAllReminders(context)
             return
         }
 
         if (intent?.action == ReminderUtils.ACTION_DAILY_REMINDER || intent?.action == null) {
             if (settingsPrefs.isDailyReminderEnabled()) {
                 showReminderNotification(context, settingsPrefs)
-                val hour = settingsPrefs.getReminderHour()
-                val minute = settingsPrefs.getReminderMinute()
-                ReminderUtils.scheduleDailyReminder(context, hour, minute)
+                ReminderUtils.rescheduleAllReminders(context)
             }
         }
     }

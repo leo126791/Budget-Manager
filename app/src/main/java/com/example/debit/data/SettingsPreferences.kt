@@ -2,6 +2,7 @@ package com.example.debit.data
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import java.util.UUID
 
 enum class AppThemeColor(val displayNameZh: String, val displayNameEn: String, val primaryColor: Color, val containerColor: Color) {
     INDIGO("經典靛藍", "Indigo", Color(0xFF4F46E5), Color(0xFFEEF2FF)),
@@ -42,6 +43,13 @@ enum class AppLanguage(val code: String, val displayName: String) {
     ZH("zh-TW", "繁體中文"),
     EN("en", "English")
 }
+
+data class ReminderTime(
+    val id: String = UUID.randomUUID().toString(),
+    val hour: Int,
+    val minute: Int,
+    val enabled: Boolean = true
+)
 
 class SettingsPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("debit_settings", Context.MODE_PRIVATE)
@@ -94,6 +102,35 @@ class SettingsPreferences(context: Context) {
     fun getReminderMinute(): Int = prefs.getInt("reminder_minute", 0)
     fun setReminderTime(hour: Int, minute: Int) {
         prefs.edit().putInt("reminder_hour", hour).putInt("reminder_minute", minute).apply()
+    }
+
+    fun getReminderTimes(): List<ReminderTime> {
+        val raw = prefs.getString("reminder_times_v2", null)
+        if (raw.isNullOrEmpty()) {
+            val oldHour = getReminderHour()
+            val oldMin = getReminderMinute()
+            val defaultList = listOf(ReminderTime(id = "reminder_1", hour = oldHour, minute = oldMin, enabled = isDailyReminderEnabled()))
+            saveReminderTimes(defaultList)
+            return defaultList
+        }
+        return try {
+            raw.split("|").filter { it.isNotBlank() }.map { item ->
+                val parts = item.split(",")
+                ReminderTime(
+                    id = parts[0],
+                    hour = parts[1].toInt(),
+                    minute = parts[2].toInt(),
+                    enabled = parts.getOrNull(3) == "1"
+                )
+            }
+        } catch (_: Exception) {
+            listOf(ReminderTime("reminder_1", 21, 0, true))
+        }
+    }
+
+    fun saveReminderTimes(list: List<ReminderTime>) {
+        val serialized = list.joinToString("|") { "${it.id},${it.hour},${it.minute},${if (it.enabled) 1 else 0}" }
+        prefs.edit().putString("reminder_times_v2", serialized).apply()
     }
 
     fun isModern3DUiEnabled(): Boolean = prefs.getBoolean("modern_3d_ui", true)

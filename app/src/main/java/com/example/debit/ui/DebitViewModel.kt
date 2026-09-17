@@ -9,6 +9,7 @@ import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
 import com.example.debit.data.Budget
 import com.example.debit.data.DebitRepository
+import com.example.debit.data.ReminderTime
 import com.example.debit.data.SettingsPreferences
 import com.example.debit.data.Subscription
 import com.example.debit.data.Transaction
@@ -64,8 +65,7 @@ data class DebitUiState(
     val isBetaTestingEnabled: Boolean = false,
     val isGooglePayListenerEnabled: Boolean = false,
     val isDailyReminderEnabled: Boolean = false,
-    val reminderHour: Int = 21,
-    val reminderMinute: Int = 0,
+    val reminderTimes: List<ReminderTime> = emptyList(),
     val isIncomeTrackingEnabled: Boolean = true,
     val isSearchEnabled: Boolean = true,
     val isSubscriptionEnabled: Boolean = true,
@@ -120,11 +120,8 @@ class DebitViewModel(
     private val _dailyReminderEnabled = MutableStateFlow(settingsPrefs.isDailyReminderEnabled())
     val dailyReminderEnabled: StateFlow<Boolean> = _dailyReminderEnabled
 
-    private val _reminderHour = MutableStateFlow(settingsPrefs.getReminderHour())
-    val reminderHour: StateFlow<Int> = _reminderHour
-
-    private val _reminderMinute = MutableStateFlow(settingsPrefs.getReminderMinute())
-    val reminderMinute: StateFlow<Int> = _reminderMinute
+    private val _reminderTimes = MutableStateFlow(settingsPrefs.getReminderTimes())
+    val reminderTimes: StateFlow<List<ReminderTime>> = _reminderTimes
 
     private val _incomeTrackingEnabled = MutableStateFlow(settingsPrefs.isIncomeTrackingEnabled())
     private val _searchEnabled = MutableStateFlow(settingsPrefs.isSearchEnabled())
@@ -294,8 +291,7 @@ class DebitViewModel(
             isBetaTestingEnabled = betaEnabled,
             isGooglePayListenerEnabled = googlePayEnabled,
             isDailyReminderEnabled = _dailyReminderEnabled.value,
-            reminderHour = _reminderHour.value,
-            reminderMinute = _reminderMinute.value,
+            reminderTimes = _reminderTimes.value,
             isIncomeTrackingEnabled = incomeEnabled,
             isSearchEnabled = searchEnabled,
             isSubscriptionEnabled = subscriptionEnabled,
@@ -316,8 +312,7 @@ class DebitViewModel(
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
             isGooglePayListenerEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isGooglePayListenerEnabled(),
             isDailyReminderEnabled = settingsPrefs.isDailyReminderEnabled(),
-            reminderHour = settingsPrefs.getReminderHour(),
-            reminderMinute = settingsPrefs.getReminderMinute(),
+            reminderTimes = settingsPrefs.getReminderTimes(),
             isIncomeTrackingEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isIncomeTrackingEnabled(),
             isSubscriptionEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSubscriptionEnabled(),
             isMultiAccountEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isMultiAccountEnabled(),
@@ -563,20 +558,40 @@ class DebitViewModel(
         }
     }
 
-    fun setDailyReminder(enabled: Boolean, hour: Int = _reminderHour.value, minute: Int = _reminderMinute.value) {
+    fun setDailyReminderMasterEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsPrefs.setDailyReminderEnabled(enabled)
-            settingsPrefs.setReminderTime(hour, minute)
             _dailyReminderEnabled.value = enabled
-            _reminderHour.value = hour
-            _reminderMinute.value = minute
+            ReminderUtils.rescheduleAllReminders(getApplication())
+        }
+    }
 
-            val context = getApplication<Application>()
-            if (enabled) {
-                ReminderUtils.scheduleDailyReminder(context, hour, minute)
-            } else {
-                ReminderUtils.cancelDailyReminder(context)
-            }
+    fun addReminderTime(hour: Int, minute: Int) {
+        val current = settingsPrefs.getReminderTimes().toMutableList()
+        val newReminder = ReminderTime(hour = hour, minute = minute, enabled = true)
+        current.add(newReminder)
+        settingsPrefs.saveReminderTimes(current)
+        _reminderTimes.value = current
+        ReminderUtils.rescheduleAllReminders(getApplication())
+    }
+
+    fun deleteReminderTime(reminder: ReminderTime) {
+        val current = settingsPrefs.getReminderTimes().toMutableList()
+        current.removeAll { it.id == reminder.id }
+        settingsPrefs.saveReminderTimes(current)
+        _reminderTimes.value = current
+        ReminderUtils.cancelReminderTime(getApplication(), reminder)
+    }
+
+    fun toggleReminderTime(reminder: ReminderTime, enabled: Boolean) {
+        val current = settingsPrefs.getReminderTimes().toMutableList()
+        val index = current.indexOfFirst { it.id == reminder.id }
+        if (index >= 0) {
+            val updated = current[index].copy(enabled = enabled)
+            current[index] = updated
+            settingsPrefs.saveReminderTimes(current)
+            _reminderTimes.value = current
+            ReminderUtils.rescheduleAllReminders(getApplication())
         }
     }
 

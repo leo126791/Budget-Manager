@@ -3,6 +3,7 @@ package com.example.debit.ui.dialogs
 import androidx.compose.runtime.Composable
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
+import com.example.debit.data.ReminderTime
 import com.example.debit.ui.screens.SettingsScreen
 
 @Composable
@@ -12,6 +13,8 @@ fun SettingsDialog(
     currentLanguage: AppLanguage,
     currentBetaTestingEnabled: Boolean,
     currentGooglePayListenerEnabled: Boolean = false,
+    currentDailyReminderEnabled: Boolean = false,
+    reminderTimes: List<ReminderTime> = emptyList(),
     currentIncomeTrackingEnabled: Boolean = true,
     currentSearchEnabled: Boolean = true,
     currentSubscriptionEnabled: Boolean = true,
@@ -20,6 +23,10 @@ fun SettingsDialog(
     currentDragDateReorderEnabled: Boolean = true,
     currentAutoBackupEnabled: Boolean = true,
     lastAutoBackupTime: Long,
+    onDailyReminderMasterChange: (Boolean) -> Unit = {},
+    onAddReminderTime: (Int, Int) -> Unit = { _, _ -> },
+    onDeleteReminderTime: (ReminderTime) -> Unit = {},
+    onToggleReminderTime: (ReminderTime, Boolean) -> Unit = { _, _ -> },
     onSaveSettings: (
         budgetLimit: Double,
         themeColor: AppThemeColor,
@@ -45,6 +52,8 @@ fun SettingsDialog(
         currentLanguage = currentLanguage,
         currentBetaTestingEnabled = currentBetaTestingEnabled,
         currentGooglePayListenerEnabled = currentGooglePayListenerEnabled,
+        currentDailyReminderEnabled = currentDailyReminderEnabled,
+        reminderTimes = reminderTimes,
         currentIncomeTrackingEnabled = currentIncomeTrackingEnabled,
         currentSearchEnabled = currentSearchEnabled,
         currentSubscriptionEnabled = currentSubscriptionEnabled,
@@ -53,6 +62,10 @@ fun SettingsDialog(
         currentDragDateReorderEnabled = currentDragDateReorderEnabled,
         currentAutoBackupEnabled = currentAutoBackupEnabled,
         lastAutoBackupTime = lastAutoBackupTime,
+        onDailyReminderMasterChange = onDailyReminderMasterChange,
+        onAddReminderTime = onAddReminderTime,
+        onDeleteReminderTime = onDeleteReminderTime,
+        onToggleReminderTime = onToggleReminderTime,
         onSaveSettings = onSaveSettings,
         onExportReport = onExportReport,
         onBackupToGoogleDrive = onBackupToGoogleDrive,

@@ -25,6 +25,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import com.example.debit.data.ReminderTime
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
@@ -89,8 +92,7 @@ fun SettingsScreen(
     currentBetaTestingEnabled: Boolean,
     currentGooglePayListenerEnabled: Boolean = false,
     currentDailyReminderEnabled: Boolean = false,
-    currentReminderHour: Int = 21,
-    currentReminderMinute: Int = 0,
+    reminderTimes: List<ReminderTime> = emptyList(),
     currentIncomeTrackingEnabled: Boolean = true,
     currentSearchEnabled: Boolean = true,
     currentSubscriptionEnabled: Boolean = true,
@@ -100,7 +102,10 @@ fun SettingsScreen(
     currentAutoBackupEnabled: Boolean = true,
     lastAutoBackupTime: Long,
     isEmbedded: Boolean = false,
-    onDailyReminderChange: (enabled: Boolean, hour: Int, minute: Int) -> Unit = { _, _, _ -> },
+    onDailyReminderMasterChange: (Boolean) -> Unit = {},
+    onAddReminderTime: (Int, Int) -> Unit = { _, _ -> },
+    onDeleteReminderTime: (ReminderTime) -> Unit = {},
+    onToggleReminderTime: (ReminderTime, Boolean) -> Unit = { _, _ -> },
     onSaveSettings: (
         budgetLimit: Double,
         themeColor: AppThemeColor,
@@ -137,8 +142,6 @@ fun SettingsScreen(
     var betaTestingState by remember { mutableStateOf(currentBetaTestingEnabled) }
     var googlePayListenerState by remember { mutableStateOf(currentGooglePayListenerEnabled) }
     var dailyReminderState by remember { mutableStateOf(currentDailyReminderEnabled) }
-    var reminderHourState by remember { mutableIntStateOf(currentReminderHour) }
-    var reminderMinuteState by remember { mutableIntStateOf(currentReminderMinute) }
     var incomeTrackingState by remember { mutableStateOf(currentIncomeTrackingEnabled) }
     var searchState by remember { mutableStateOf(currentSearchEnabled) }
     var subscriptionState by remember { mutableStateOf(currentSubscriptionEnabled) }
@@ -216,14 +219,14 @@ fun SettingsScreen(
                 }
             },
             dailyReminderState = dailyReminderState,
-            reminderHourState = reminderHourState,
-            reminderMinuteState = reminderMinuteState,
-            onDailyReminderChange = { enabled, h, m ->
+            reminderTimes = reminderTimes,
+            onDailyReminderMasterChange = { enabled ->
                 dailyReminderState = enabled
-                reminderHourState = h
-                reminderMinuteState = m
-                onDailyReminderChange(enabled, h, m)
+                onDailyReminderMasterChange(enabled)
             },
+            onAddReminderTime = onAddReminderTime,
+            onDeleteReminderTime = onDeleteReminderTime,
+            onToggleReminderTime = onToggleReminderTime,
             incomeTrackingState = incomeTrackingState,
             onIncomeTrackingChange = { newIncome ->
                 incomeTrackingState = newIncome
@@ -330,9 +333,11 @@ private fun SettingsBodyList(
     googlePayListenerState: Boolean,
     onGooglePayListenerChange: (Boolean) -> Unit,
     dailyReminderState: Boolean,
-    reminderHourState: Int,
-    reminderMinuteState: Int,
-    onDailyReminderChange: (Boolean, Int, Int) -> Unit,
+    reminderTimes: List<ReminderTime>,
+    onDailyReminderMasterChange: (Boolean) -> Unit,
+    onAddReminderTime: (Int, Int) -> Unit,
+    onDeleteReminderTime: (ReminderTime) -> Unit,
+    onToggleReminderTime: (ReminderTime, Boolean) -> Unit,
     incomeTrackingState: Boolean,
     onIncomeTrackingChange: (Boolean) -> Unit,
     searchState: Boolean,
@@ -539,7 +544,7 @@ private fun SettingsBodyList(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (isZh) "定時發送通知，提醒您記錄今日開銷" else "Send a daily notification to remind you to log expenses",
+                                text = if (isZh) "設定多個提醒時間，定時發送通知提醒記錄開銷" else "Set multiple reminder times to log your expenses",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -549,46 +554,88 @@ private fun SettingsBodyList(
                     Switch(
                         checked = dailyReminderState,
                         onCheckedChange = { enabled ->
-                            onDailyReminderChange(enabled, reminderHourState, reminderMinuteState)
+                            onDailyReminderMasterChange(enabled)
                         }
                     )
                 }
 
                 if (dailyReminderState) {
                     HorizontalDivider()
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+
+                    if (reminderTimes.isEmpty()) {
                         Text(
-                            text = if (isZh)
-                                "提醒時間：%02d:%02d".format(reminderHourState, reminderMinuteState)
-                            else
-                                "Reminder Time: %02d:%02d".format(reminderHourState, reminderMinuteState),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                            text = if (isZh) "尚未設定提醒時間" else "No reminder times set",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        val context = LocalContext.current
-                        OutlinedButton(
-                            onClick = {
-                                TimePickerDialog(
-                                    context,
-                                    { _, hourOfDay, minute ->
-                                        onDailyReminderChange(true, hourOfDay, minute)
-                                    },
-                                    reminderHourState,
-                                    reminderMinuteState,
-                                    true
-                                ).show()
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = if (isZh) "變更時間" else "Change Time",
-                                fontWeight = FontWeight.Bold
-                            )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            reminderTimes.forEach { reminder ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "%02d:%02d".format(reminder.hour, reminder.minute),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Switch(
+                                            checked = reminder.enabled,
+                                            onCheckedChange = { onToggleReminderTime(reminder, it) }
+                                        )
+                                        IconButton(
+                                            onClick = { onDeleteReminderTime(reminder) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = if (isZh) "刪除" else "Delete",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
+                    }
+
+                    val currentCtx = LocalContext.current
+                    OutlinedButton(
+                        onClick = {
+                            TimePickerDialog(
+                                currentCtx,
+                                { _, hourOfDay, minute ->
+                                    onAddReminderTime(hourOfDay, minute)
+                                },
+                                21,
+                                0,
+                                true
+                            ).show()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isZh) "新增提醒時間" else "Add Reminder Time",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
