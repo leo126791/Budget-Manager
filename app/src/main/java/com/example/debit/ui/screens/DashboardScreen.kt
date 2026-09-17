@@ -1114,8 +1114,13 @@ fun TransactionItem(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    val localizedCategory = AppStrings.getCategoryName(transaction.category, language)
+                    val localizedNote = transaction.note.split(" • ").joinToString(" • ") { part ->
+                        AppStrings.getSubCategoryName(part, language)
+                    }
+
                     Text(
-                        text = transaction.category,
+                        text = localizedCategory,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -1123,9 +1128,9 @@ fun TransactionItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (transaction.note.isNotBlank()) {
+                        if (localizedNote.isNotBlank()) {
                             Text(
-                                text = "${transaction.note} • $timeStr",
+                                text = "$localizedNote • $timeStr",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

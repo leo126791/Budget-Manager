@@ -416,7 +416,7 @@ fun AddTransactionDialog(
                 // Sub-category Selection for ALL Categories
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = if (isZh) "選擇「$category」細項" else "Subcategory for $category",
+                        text = if (isZh) "選擇「$category」細項" else "Subcategory for ${AppStrings.getCategoryName(category, language)}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -541,7 +541,7 @@ fun AddTransactionDialog(
         AlertDialog(
             onDismissRequest = { showAddSubDialog = false },
             title = {
-                Text(if (isZh) "新增「$category」次細項" else "Add $category Subcategory")
+                Text(if (isZh) "新增「$category」次細項" else "Add ${AppStrings.getCategoryName(category, language)} Subcategory")
             },
             text = {
                 OutlinedTextField(

@@ -353,8 +353,9 @@ fun DailyBreakdownDialog(
                                                             )
 
                                                             val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tx.date))
+                                                            val localizedNote = tx.note.split(" • ").joinToString(" • ") { AppStrings.getSubCategoryName(it, language) }
                                                             val detailText = when {
-                                                                tx.note.isNotBlank() -> "$timeStr • ${tx.note}"
+                                                                localizedNote.isNotBlank() -> "$timeStr • $localizedNote"
                                                                 tx.locationName.isNotBlank() -> "$timeStr • 📍 ${tx.locationName}"
                                                                 else -> timeStr
                                                             }
