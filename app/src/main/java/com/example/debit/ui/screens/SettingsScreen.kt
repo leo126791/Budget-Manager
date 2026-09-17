@@ -1055,7 +1055,7 @@ private fun SettingsBodyList(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = if (isZh) "✨ 體驗/重看啟動引導動畫" else "✨ Replay Startup Onboarding",
+                        text = if (isZh) "體驗/重看啟動引導動畫" else "Replay Startup Onboarding",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -1071,7 +1071,7 @@ private fun SettingsBodyList(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Budget Manager v1.0.2 (測試人員版)",
+                text = "Budget Manager Beta v1.0.3",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
