@@ -1,5 +1,6 @@
 package com.example.debit.ui.screens
 
+import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Translate
@@ -54,6 +56,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -85,6 +88,9 @@ fun SettingsScreen(
     currentLanguage: AppLanguage,
     currentBetaTestingEnabled: Boolean,
     currentGooglePayListenerEnabled: Boolean = false,
+    currentDailyReminderEnabled: Boolean = false,
+    currentReminderHour: Int = 21,
+    currentReminderMinute: Int = 0,
     currentIncomeTrackingEnabled: Boolean = true,
     currentSearchEnabled: Boolean = true,
     currentSubscriptionEnabled: Boolean = true,
@@ -94,6 +100,7 @@ fun SettingsScreen(
     currentAutoBackupEnabled: Boolean = true,
     lastAutoBackupTime: Long,
     isEmbedded: Boolean = false,
+    onDailyReminderChange: (enabled: Boolean, hour: Int, minute: Int) -> Unit = { _, _, _ -> },
     onSaveSettings: (
         budgetLimit: Double,
         themeColor: AppThemeColor,
@@ -129,6 +136,9 @@ fun SettingsScreen(
     var selectedLanguage by remember { mutableStateOf(currentLanguage) }
     var betaTestingState by remember { mutableStateOf(currentBetaTestingEnabled) }
     var googlePayListenerState by remember { mutableStateOf(currentGooglePayListenerEnabled) }
+    var dailyReminderState by remember { mutableStateOf(currentDailyReminderEnabled) }
+    var reminderHourState by remember { mutableIntStateOf(currentReminderHour) }
+    var reminderMinuteState by remember { mutableIntStateOf(currentReminderMinute) }
     var incomeTrackingState by remember { mutableStateOf(currentIncomeTrackingEnabled) }
     var searchState by remember { mutableStateOf(currentSearchEnabled) }
     var subscriptionState by remember { mutableStateOf(currentSubscriptionEnabled) }
@@ -204,6 +214,15 @@ fun SettingsScreen(
                     Toast.makeText(context, promptMsg, Toast.LENGTH_LONG).show()
                     context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 }
+            },
+            dailyReminderState = dailyReminderState,
+            reminderHourState = reminderHourState,
+            reminderMinuteState = reminderMinuteState,
+            onDailyReminderChange = { enabled, h, m ->
+                dailyReminderState = enabled
+                reminderHourState = h
+                reminderMinuteState = m
+                onDailyReminderChange(enabled, h, m)
             },
             incomeTrackingState = incomeTrackingState,
             onIncomeTrackingChange = { newIncome ->
@@ -310,6 +329,10 @@ private fun SettingsBodyList(
     onBetaTestingChange: (Boolean) -> Unit,
     googlePayListenerState: Boolean,
     onGooglePayListenerChange: (Boolean) -> Unit,
+    dailyReminderState: Boolean,
+    reminderHourState: Int,
+    reminderMinuteState: Int,
+    onDailyReminderChange: (Boolean, Int, Int) -> Unit,
     incomeTrackingState: Boolean,
     onIncomeTrackingChange: (Boolean) -> Unit,
     searchState: Boolean,
@@ -483,7 +506,95 @@ private fun SettingsBodyList(
             }
         }
 
-        // 4. Beta Testing & Experimental Features Card
+        // 4. Daily Reminder Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = if (isZh) "每日記帳提醒" else "Daily Expense Reminder",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isZh) "定時發送通知，提醒您記錄今日開銷" else "Send a daily notification to remind you to log expenses",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = dailyReminderState,
+                        onCheckedChange = { enabled ->
+                            onDailyReminderChange(enabled, reminderHourState, reminderMinuteState)
+                        }
+                    )
+                }
+
+                if (dailyReminderState) {
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isZh)
+                                "提醒時間：%02d:%02d".format(reminderHourState, reminderMinuteState)
+                            else
+                                "Reminder Time: %02d:%02d".format(reminderHourState, reminderMinuteState),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        val context = LocalContext.current
+                        OutlinedButton(
+                            onClick = {
+                                TimePickerDialog(
+                                    context,
+                                    { _, hourOfDay, minute ->
+                                        onDailyReminderChange(true, hourOfDay, minute)
+                                    },
+                                    reminderHourState,
+                                    reminderMinuteState,
+                                    true
+                                ).show()
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = if (isZh) "變更時間" else "Change Time",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Beta Testing & Experimental Features Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),

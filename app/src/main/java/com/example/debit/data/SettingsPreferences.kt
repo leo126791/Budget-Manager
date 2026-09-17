@@ -87,6 +87,15 @@ class SettingsPreferences(context: Context) {
     fun isGooglePayListenerEnabled(): Boolean = prefs.getBoolean("google_pay_listener", false)
     fun setGooglePayListenerEnabled(enabled: Boolean) = prefs.edit().putBoolean("google_pay_listener", enabled).apply()
 
+    fun isDailyReminderEnabled(): Boolean = prefs.getBoolean("daily_reminder_enabled", false)
+    fun setDailyReminderEnabled(enabled: Boolean) = prefs.edit().putBoolean("daily_reminder_enabled", enabled).apply()
+
+    fun getReminderHour(): Int = prefs.getInt("reminder_hour", 21)
+    fun getReminderMinute(): Int = prefs.getInt("reminder_minute", 0)
+    fun setReminderTime(hour: Int, minute: Int) {
+        prefs.edit().putInt("reminder_hour", hour).putInt("reminder_minute", minute).apply()
+    }
+
     fun isModern3DUiEnabled(): Boolean = prefs.getBoolean("modern_3d_ui", true)
     fun setModern3DUiEnabled(enabled: Boolean) = prefs.edit().putBoolean("modern_3d_ui", enabled).apply()
 

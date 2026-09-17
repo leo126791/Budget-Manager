@@ -15,6 +15,7 @@ import com.example.debit.data.Transaction
 import com.example.debit.data.TransactionType
 import com.example.debit.ui.utils.BackupUtils
 import com.example.debit.ui.utils.DateFormatUtils
+import com.example.debit.ui.utils.ReminderUtils
 import com.example.debit.widget.BudgetWidgetProvider
 import com.example.debit.widget.QuickAddWidgetProvider
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +63,9 @@ data class DebitUiState(
     val totalSubscriptionsMonthly: Double = 0.0,
     val isBetaTestingEnabled: Boolean = false,
     val isGooglePayListenerEnabled: Boolean = false,
+    val isDailyReminderEnabled: Boolean = false,
+    val reminderHour: Int = 21,
+    val reminderMinute: Int = 0,
     val isIncomeTrackingEnabled: Boolean = true,
     val isSearchEnabled: Boolean = true,
     val isSubscriptionEnabled: Boolean = true,
@@ -112,6 +116,15 @@ class DebitViewModel(
 
     private val _googlePayListenerEnabled = MutableStateFlow(settingsPrefs.isGooglePayListenerEnabled())
     val googlePayListenerEnabled: StateFlow<Boolean> = _googlePayListenerEnabled
+
+    private val _dailyReminderEnabled = MutableStateFlow(settingsPrefs.isDailyReminderEnabled())
+    val dailyReminderEnabled: StateFlow<Boolean> = _dailyReminderEnabled
+
+    private val _reminderHour = MutableStateFlow(settingsPrefs.getReminderHour())
+    val reminderHour: StateFlow<Int> = _reminderHour
+
+    private val _reminderMinute = MutableStateFlow(settingsPrefs.getReminderMinute())
+    val reminderMinute: StateFlow<Int> = _reminderMinute
 
     private val _incomeTrackingEnabled = MutableStateFlow(settingsPrefs.isIncomeTrackingEnabled())
     private val _searchEnabled = MutableStateFlow(settingsPrefs.isSearchEnabled())
@@ -280,6 +293,9 @@ class DebitViewModel(
             totalSubscriptionsMonthly = monthlySubs,
             isBetaTestingEnabled = betaEnabled,
             isGooglePayListenerEnabled = googlePayEnabled,
+            isDailyReminderEnabled = _dailyReminderEnabled.value,
+            reminderHour = _reminderHour.value,
+            reminderMinute = _reminderMinute.value,
             isIncomeTrackingEnabled = incomeEnabled,
             isSearchEnabled = searchEnabled,
             isSubscriptionEnabled = subscriptionEnabled,
@@ -299,6 +315,9 @@ class DebitViewModel(
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
             isGooglePayListenerEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isGooglePayListenerEnabled(),
+            isDailyReminderEnabled = settingsPrefs.isDailyReminderEnabled(),
+            reminderHour = settingsPrefs.getReminderHour(),
+            reminderMinute = settingsPrefs.getReminderMinute(),
             isIncomeTrackingEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isIncomeTrackingEnabled(),
             isSubscriptionEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isSubscriptionEnabled(),
             isMultiAccountEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isMultiAccountEnabled(),
@@ -541,6 +560,23 @@ class DebitViewModel(
         viewModelScope.launch {
             settingsPrefs.setGooglePayListenerEnabled(enabled)
             _googlePayListenerEnabled.value = enabled
+        }
+    }
+
+    fun setDailyReminder(enabled: Boolean, hour: Int = _reminderHour.value, minute: Int = _reminderMinute.value) {
+        viewModelScope.launch {
+            settingsPrefs.setDailyReminderEnabled(enabled)
+            settingsPrefs.setReminderTime(hour, minute)
+            _dailyReminderEnabled.value = enabled
+            _reminderHour.value = hour
+            _reminderMinute.value = minute
+
+            val context = getApplication<Application>()
+            if (enabled) {
+                ReminderUtils.scheduleDailyReminder(context, hour, minute)
+            } else {
+                ReminderUtils.cancelDailyReminder(context)
+            }
         }
     }
 

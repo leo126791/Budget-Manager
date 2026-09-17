@@ -875,6 +875,9 @@ fun DashboardScreen(
                         currentLanguage = uiState.appLanguage,
                         currentBetaTestingEnabled = uiState.isBetaTestingEnabled,
                         currentGooglePayListenerEnabled = uiState.isGooglePayListenerEnabled,
+                        currentDailyReminderEnabled = uiState.isDailyReminderEnabled,
+                        currentReminderHour = uiState.reminderHour,
+                        currentReminderMinute = uiState.reminderMinute,
                         currentIncomeTrackingEnabled = uiState.isIncomeTrackingEnabled,
                         currentSearchEnabled = uiState.isSearchEnabled,
                         currentSubscriptionEnabled = uiState.isSubscriptionEnabled,
@@ -884,6 +887,9 @@ fun DashboardScreen(
                         currentAutoBackupEnabled = uiState.autoBackupEnabled,
                         lastAutoBackupTime = uiState.lastAutoBackupTime,
                         isEmbedded = true,
+                        onDailyReminderChange = { enabled, h, m ->
+                            viewModel.setDailyReminder(enabled, h, m)
+                        },
                         onSaveSettings = { budgetLimit, color, language, betaTesting, gPay, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup ->
                             viewModel.saveSettings(
                                 budgetLimit, color, language, betaTesting, gPay,
