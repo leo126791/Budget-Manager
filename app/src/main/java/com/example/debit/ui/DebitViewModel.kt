@@ -310,7 +310,7 @@ class DebitViewModel(
             themeColor = settingsPrefs.getThemeColor(),
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
-            isGooglePayListenerEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isGooglePayListenerEnabled(),
+            isGooglePayListenerEnabled = settingsPrefs.isGooglePayListenerEnabled(),
             isDailyReminderEnabled = settingsPrefs.isDailyReminderEnabled(),
             reminderTimes = settingsPrefs.getReminderTimes(),
             isIncomeTrackingEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isIncomeTrackingEnabled(),

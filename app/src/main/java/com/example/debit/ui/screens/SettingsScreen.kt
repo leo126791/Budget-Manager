@@ -641,7 +641,103 @@ private fun SettingsBodyList(
             }
         }
 
-        // 5. Beta Testing & Experimental Features Card
+        // 5. Google Pay Auto-Tracking Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AccountBalanceWallet,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = if (isZh) "Google Pay 消費自動記帳" else "Google Pay Auto-Tracking",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isZh) "讀取 Google Pay 扣款通知並自動寫入記帳" else "Auto-capture Google Pay notifications",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = googlePayListenerState,
+                        onCheckedChange = onGooglePayListenerChange
+                    )
+                }
+
+                if (googlePayListenerState) {
+                    HorizontalDivider()
+                    val currentCtx = LocalContext.current
+                    val isGranted = PaymentNotificationListenerService.isPermissionGranted(currentCtx)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                currentCtx.startActivity(intent)
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = if (isGranted) {
+                                        if (isZh) "通知存取權限：已啟用 (運作中)" else "Notification Access: Granted"
+                                    } else {
+                                        if (isZh) "尚未開啟通知存取權限 (點此開啓權限)" else "Notification Access Required (Tap to Grant)"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                if (!isGranted) {
+                                    Text(
+                                        text = if (isZh) "點擊此處前往系統設定，允許 Budget Manager 讀取通知" else "Tap to enable Notification Access in System Settings",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Beta Testing & Experimental Features Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -658,7 +754,7 @@ private fun SettingsBodyList(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isZh) "🧪 加入 Beta 實驗性功能測試" else "🧪 Join Beta Testing",
+                            text = if (isZh) "加入 Beta 實驗性功能測試" else "Join Beta Testing",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -685,79 +781,6 @@ private fun SettingsBodyList(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // 0. Google Pay Auto-Tracking
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isZh) "💳 Google Pay 消費自動記帳" else "💳 Google Pay Auto-Tracking",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = if (isZh) "讀取 Google Pay 扣款通知並自動寫入記帳" else "Auto-capture Google Pay notifications",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Switch(
-                                    checked = googlePayListenerState,
-                                    onCheckedChange = onGooglePayListenerChange
-                                )
-                            }
-
-                            if (googlePayListenerState) {
-                                val currentCtx = LocalContext.current
-                                val isGranted = PaymentNotificationListenerService.isPermissionGranted(currentCtx)
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                            currentCtx.startActivity(intent)
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                            contentDescription = null,
-                                            tint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Column {
-                                            Text(
-                                                text = if (isGranted) {
-                                                    if (isZh) "🟢 通知存取權限：已啟用 (運作中)" else "🟢 Notification Access: Granted"
-                                                } else {
-                                                    if (isZh) "🔴 尚未開啟「通知存取權限」（點此開啓權限）" else "🔴 Notification Access Required (Tap to Grant)"
-                                                },
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                            if (!isGranted) {
-                                                Text(
-                                                    text = if (isZh) "點擊此處前往系統設定，允許 Budget Manager 讀取通知" else "Tap to enable Notification Access in System Settings",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider()
 
                             // 1. Income Tracking
                             Row(

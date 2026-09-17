@@ -44,11 +44,10 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val context = applicationContext
         val settingsPrefs = SettingsPreferences(context)
-        val betaOn = settingsPrefs.isBetaTestingEnabled()
         val gpayOn = settingsPrefs.isGooglePayListenerEnabled()
         val packageName = sbn.packageName ?: ""
 
-        if (!betaOn || !gpayOn) return
+        if (!gpayOn) return
 
         val extras = sbn.notification?.extras ?: return
 
