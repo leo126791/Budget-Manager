@@ -1,5 +1,11 @@
 package com.example.debit.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -77,6 +83,8 @@ import android.widget.Toast
 import com.example.debit.service.PaymentNotificationListenerService
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
+import com.example.debit.data.SettingsPreferences
+import com.example.debit.receiver.DailyReminderReceiver
 import com.example.debit.ui.utils.AppStrings
 import com.example.debit.ui.utils.bouncyClickable
 import java.text.SimpleDateFormat
@@ -152,6 +160,28 @@ fun SettingsScreen(
 
     val isZh = selectedLanguage == AppLanguage.ZH
 
+    val postNotificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            DailyReminderReceiver.showReminderNotification(
+                context,
+                SettingsPreferences(context)
+            )
+            Toast.makeText(
+                context,
+                if (isZh) "已發送測試通知！" else "Test Notification Sent!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                context,
+                if (isZh) "請開啟通知權限以接收記帳提醒！" else "Notification permission required!",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     fun triggerAutoSave(
         budget: String = budgetInput,
         color: AppThemeColor = selectedColor,
@@ -223,10 +253,30 @@ fun SettingsScreen(
             onDailyReminderMasterChange = { enabled ->
                 dailyReminderState = enabled
                 onDailyReminderMasterChange(enabled)
+                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
             },
             onAddReminderTime = onAddReminderTime,
             onDeleteReminderTime = onDeleteReminderTime,
             onToggleReminderTime = onToggleReminderTime,
+            onTestNotification = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    DailyReminderReceiver.showReminderNotification(
+                        context,
+                        SettingsPreferences(context)
+                    )
+                    Toast.makeText(
+                        context,
+                        if (isZh) "已發送測試通知！" else "Test Notification Sent!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
             incomeTrackingState = incomeTrackingState,
             onIncomeTrackingChange = { newIncome ->
                 incomeTrackingState = newIncome
@@ -338,6 +388,7 @@ private fun SettingsBodyList(
     onAddReminderTime: (Int, Int) -> Unit,
     onDeleteReminderTime: (ReminderTime) -> Unit,
     onToggleReminderTime: (ReminderTime, Boolean) -> Unit,
+    onTestNotification: () -> Unit,
     incomeTrackingState: Boolean,
     onIncomeTrackingChange: (Boolean) -> Unit,
     searchState: Boolean,
@@ -611,31 +662,53 @@ private fun SettingsBodyList(
                     }
 
                     val currentCtx = LocalContext.current
-                    OutlinedButton(
-                        onClick = {
-                            TimePickerDialog(
-                                currentCtx,
-                                { _, hourOfDay, minute ->
-                                    onAddReminderTime(hourOfDay, minute)
-                                },
-                                21,
-                                0,
-                                true
-                            ).show()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isZh) "新增提醒時間" else "Add Reminder Time",
-                            fontWeight = FontWeight.Bold
-                        )
+                        OutlinedButton(
+                            onClick = {
+                                TimePickerDialog(
+                                    currentCtx,
+                                    { _, hourOfDay, minute ->
+                                        onAddReminderTime(hourOfDay, minute)
+                                    },
+                                    21,
+                                    0,
+                                    true
+                                ).show()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isZh) "新增提醒時間" else "Add Time",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = onTestNotification,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isZh) "測試發送通知" else "Test Notification",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
