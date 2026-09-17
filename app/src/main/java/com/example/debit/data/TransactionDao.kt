@@ -16,6 +16,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE date >= :startTime AND date <= :endTime ORDER BY date DESC")
     fun getTransactionsByDateRange(startTime: Long, endTime: Long): Flow<List<Transaction>>
 
+    @Query("SELECT * FROM transactions WHERE date >= :startTime AND date <= :endTime")
+    suspend fun getRecentTransactions(startTime: Long, endTime: Long): List<Transaction>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: Transaction)
 

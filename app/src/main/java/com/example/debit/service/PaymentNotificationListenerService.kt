@@ -1,6 +1,5 @@
 package com.example.debit.service
 
-import android.app.Notification
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -19,10 +18,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
+import kotlin.math.abs
 
 class PaymentNotificationListenerService : NotificationListenerService() {
 
+    private data class RecentPayment(
+        val amount: Double,
+        val timestamp: Long
+    )
+
     companion object {
+        private val recentPaymentsCache = mutableListOf<RecentPayment>()
+        private const val DEDUPLICATION_WINDOW_MS = 60_000L // 60 seconds time window for duplicate payment notifications
+
         fun isPermissionGranted(context: Context): Boolean {
             val packageName = context.packageName
             val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
@@ -39,6 +47,8 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val betaOn = settingsPrefs.isBetaTestingEnabled()
         val gpayOn = settingsPrefs.isGooglePayListenerEnabled()
         val packageName = sbn.packageName ?: ""
+
+        if (!betaOn || !gpayOn) return
 
         val extras = sbn.notification?.extras ?: return
 
@@ -59,54 +69,101 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val combined = "$title $text $bigText $subText $titleBig $summaryText".trim()
 
-        Log.d("PaymentService", "Notification received from pkg: $packageName | combined: '$combined' | title: '$title' | text: '$text' | betaOn=$betaOn, gpayOn=$gpayOn")
+        Log.d("PaymentService", "Notification received from pkg: $packageName | text: '$combined'")
 
-        if (!betaOn || !gpayOn) {
-            Log.d("PaymentService", "Feature disabled in settings. Skipping.")
+        // 1. Strict Exclusions: Exclude promotional / marketing / advertisement messages
+        val promoKeywords = listOf(
+            "優惠", "折扣", "點數", "抽獎", "優惠券", "回饋", "領取", "現折", "廣告", "促銷",
+            "限時", "邀請", "訂閱", "推薦", "特價", "紅利", "序號", "禮券", "好康", "活動", "問券"
+        )
+        if (promoKeywords.any { combined.contains(it) }) {
+            Log.d("PaymentService", "Excluded promotional/marketing message. Skipping.")
             return
         }
 
-        val isWalletPkg = packageName.contains("wallet") || packageName.contains("gpay") || packageName.contains("pay") || packageName.contains("shell")
-        val isPaymentContent = combined.contains("Google Pay") || combined.contains("Google Wallet") ||
-                combined.contains("消費") || combined.contains("付款") || combined.contains("刷卡") ||
-                combined.contains("交易") || combined.contains("NT$") || combined.contains("TWD")
+        // 2. Strict Google Pay / Wallet Identification
+        val isGoogleWalletPkg = packageName.contains("wallet") || packageName.contains("gpay") ||
+                packageName == "com.google.android.apps.walletnf" || packageName == "com.google.android.apps.wallet"
+        val isExplicitGooglePay = combined.contains("Google Pay") || combined.contains("Google Wallet")
+        val isShellTest = packageName.contains("shell")
 
-        if (!isWalletPkg && !isPaymentContent) {
-            Log.d("PaymentService", "Notification content or package does not match payment rules. Skipping.")
+        if (!isGoogleWalletPkg && !isExplicitGooglePay && !isShellTest) {
+            Log.d("PaymentService", "Not a Google Pay / Wallet notification. Skipping.")
             return
         }
 
+        // 3. Must contain payment transaction action keywords
+        val paymentKeywords = listOf(
+            "付款", "支付", "消費", "刷卡", "扣款", "交易", "Tap to pay", "Paid", "Spent"
+        )
+        if (!paymentKeywords.any { combined.contains(it) }) {
+            Log.d("PaymentService", "No payment action keyword found. Skipping.")
+            return
+        }
+
+        // 4. Extract Amount
         val amount = extractAmount(combined)
         if (amount == null || amount <= 0.0) {
             Log.d("PaymentService", "Could not extract valid amount from: '$combined'. Skipping.")
             return
         }
 
+        val currentTime = System.currentTimeMillis()
+
+        // 5. In-Memory Deduplication Check (Window: 60s)
+        synchronized(recentPaymentsCache) {
+            recentPaymentsCache.removeAll { currentTime - it.timestamp > DEDUPLICATION_WINDOW_MS }
+            val isInMemoryDuplicate = recentPaymentsCache.any {
+                abs(it.amount - amount) < 0.01 && (currentTime - it.timestamp) < DEDUPLICATION_WINDOW_MS
+            }
+            if (isInMemoryDuplicate) {
+                Log.d("PaymentService", "Duplicate payment detected in cache ($amount within 60s). Skipping.")
+                return
+            }
+        }
+
         val merchantName = extractMerchant(title, text)
         val category = inferCategory(combined, merchantName)
         val isZh = settingsPrefs.getLanguage() == AppLanguage.ZH
 
-        Log.d("PaymentService", "Successfully parsed payment! Amount: $amount, Merchant: '$merchantName', Category: $category")
-
-        val transactionNote = if (merchantName.isNotBlank()) {
-            if (isZh) "Google Pay • $merchantName" else "Google Pay • $merchantName"
-        } else {
-            if (isZh) "Google Pay 自動捕捉" else "Google Pay Auto-Captured"
-        }
-
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getDatabase(context)
+
+            // 6. Database Deduplication Check (Window: 60s)
+            val startTime = currentTime - DEDUPLICATION_WINDOW_MS
+            val recentTxs = db.transactionDao().getRecentTransactions(startTime, currentTime + 5_000L)
+            val isDbDuplicate = recentTxs.any { abs(it.amount - amount) < 0.01 }
+
+            if (isDbDuplicate) {
+                Log.d("PaymentService", "Duplicate payment detected in DB ($amount within 60s). Skipping.")
+                return@launch
+            }
+
+            // Add to cache
+            synchronized(recentPaymentsCache) {
+                recentPaymentsCache.add(RecentPayment(amount, currentTime))
+            }
+
+            val transactionNote = if (merchantName.isNotBlank()) {
+                "Google Pay • $merchantName"
+            } else {
+                if (isZh) "Google Pay 自動捕捉" else "Google Pay Auto-Captured"
+            }
+
             val newTx = Transaction(
                 amount = amount,
                 category = category,
                 type = TransactionType.EXPENSE,
-                date = System.currentTimeMillis(),
+                date = currentTime,
                 note = transactionNote,
                 locationName = merchantName,
                 accountName = "Google Pay"
             )
+
             db.transactionDao().insertTransaction(newTx)
             BudgetWidgetProvider.updateAllWidgets(context)
+
+            Log.d("PaymentService", "Successfully recorded payment! Amount: $amount, Merchant: '$merchantName', Category: $category")
 
             Handler(Looper.getMainLooper()).post {
                 val displayMsg = if (isZh) {
