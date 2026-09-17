@@ -81,27 +81,19 @@ class PaymentNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. Strict Google Pay / Wallet Identification
-        val isGoogleWalletPkg = packageName.contains("wallet") || packageName.contains("gpay") ||
-                packageName == "com.google.android.apps.walletnf" || packageName == "com.google.android.apps.wallet"
-        val isExplicitGooglePay = combined.contains("Google Pay") || combined.contains("Google Wallet")
-        val isShellTest = packageName.contains("shell")
-
-        if (!isGoogleWalletPkg && !isExplicitGooglePay && !isShellTest) {
-            Log.d("PaymentService", "Not a Google Pay / Wallet notification. Skipping.")
-            return
-        }
-
-        // 3. Must contain payment transaction action keywords
+        // 2. Action & Currency Verification
         val paymentKeywords = listOf(
             "付款", "支付", "消費", "刷卡", "扣款", "交易", "Tap to pay", "Paid", "Spent"
         )
-        if (!paymentKeywords.any { combined.contains(it) }) {
-            Log.d("PaymentService", "No payment action keyword found. Skipping.")
+        val hasPaymentAction = paymentKeywords.any { combined.contains(it) }
+        val hasCurrencySymbol = combined.contains("$") || combined.contains("NT$") || combined.contains("TWD") || combined.contains("元")
+
+        if (!hasPaymentAction || !hasCurrencySymbol) {
+            Log.d("PaymentService", "No payment action or currency symbol found. Skipping.")
             return
         }
 
-        // 4. Extract Amount
+        // 3. Extract Amount
         val amount = extractAmount(combined)
         if (amount == null || amount <= 0.0) {
             Log.d("PaymentService", "Could not extract valid amount from: '$combined'. Skipping.")
@@ -110,7 +102,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val currentTime = System.currentTimeMillis()
 
-        // 5. In-Memory Deduplication Check (Window: 60s)
+        // 4. In-Memory Deduplication Check (Window: 60s)
         synchronized(recentPaymentsCache) {
             recentPaymentsCache.removeAll { currentTime - it.timestamp > DEDUPLICATION_WINDOW_MS }
             val isInMemoryDuplicate = recentPaymentsCache.any {
@@ -129,7 +121,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getDatabase(context)
 
-            // 6. Database Deduplication Check (Window: 60s)
+            // 5. Database Deduplication Check (Window: 60s)
             val startTime = currentTime - DEDUPLICATION_WINDOW_MS
             val recentTxs = db.transactionDao().getRecentTransactions(startTime, currentTime + 5_000L)
             val isDbDuplicate = recentTxs.any { abs(it.amount - amount) < 0.01 }
@@ -139,7 +131,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
                 return@launch
             }
 
-            // Add to cache
+            // Cache new payment
             synchronized(recentPaymentsCache) {
                 recentPaymentsCache.add(RecentPayment(amount, currentTime))
             }
@@ -201,14 +193,14 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val knownMerchants = listOf(
             "7-ELEVEN", "7-11", "全家", "萊爾富", "OK超商", "全聯", "麥當勞", "摩斯漢堡",
             "肯德基", "星巴克", "家樂福", "寶雅", "大潤發", "中油", "台亞", "捷運", "公車",
-            "Uber", "Foodpanda", "55688", "蝦皮", "PChome", "momo"
+            "Uber", "Foodpanda", "55688", "蝦皮", "PChome", "momo", "統一超商"
         )
         for (merchant in knownMerchants) {
             if (combined.contains(merchant, ignoreCase = true)) {
-                return merchant
+                return if (merchant == "統一超商") "7-11" else merchant
             }
         }
-        if (title.isNotBlank() && !title.contains("Google") && !title.contains("付款") && !title.contains("消費")) {
+        if (title.isNotBlank() && !title.contains("Google") && !title.contains("付款") && !title.contains("消費") && !title.contains("刷卡")) {
             return title.trim()
         }
         return ""
@@ -218,7 +210,8 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         return when {
             combined.contains("餐") || combined.contains("飯") || combined.contains("麵") ||
                     combined.contains("麥當勞") || combined.contains("肯德基") || combined.contains("星巴克") ||
-                    combined.contains("7-11") || combined.contains("7-ELEVEN") || combined.contains("全家") -> "餐飲"
+                    combined.contains("7-11") || combined.contains("7-ELEVEN") || combined.contains("全家") ||
+                    combined.contains("統一超商") -> "餐飲"
 
             combined.contains("中油") || combined.contains("加油") || combined.contains("捷運") ||
                     combined.contains("公車") || combined.contains("Uber") || combined.contains("高鐵") || combined.contains("台鐵") -> "交通"

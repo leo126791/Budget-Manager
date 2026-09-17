@@ -21,10 +21,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FileDownload
@@ -548,6 +550,53 @@ private fun SettingsBodyList(
                                     checked = googlePayListenerState,
                                     onCheckedChange = onGooglePayListenerChange
                                 )
+                            }
+
+                            if (googlePayListenerState) {
+                                val currentCtx = LocalContext.current
+                                val isGranted = PaymentNotificationListenerService.isPermissionGranted(currentCtx)
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                            currentCtx.startActivity(intent)
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                            contentDescription = null,
+                                            tint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = if (isGranted) {
+                                                    if (isZh) "🟢 通知存取權限：已啟用 (運作中)" else "🟢 Notification Access: Granted"
+                                                } else {
+                                                    if (isZh) "🔴 尚未開啟「通知存取權限」（點此開啓權限）" else "🔴 Notification Access Required (Tap to Grant)"
+                                                },
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                            if (!isGranted) {
+                                                Text(
+                                                    text = if (isZh) "點擊此處前往系統設定，允許 Budget Manager 讀取通知" else "Tap to enable Notification Access in System Settings",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             HorizontalDivider()
