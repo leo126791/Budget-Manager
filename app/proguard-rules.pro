@@ -11,6 +11,9 @@
     @androidx.compose.runtime.Composable *;
 }
 
+# Custom mapping output file to avoid IDE file lock
+-printmapping build/outputs/mapping/release/mapping_v12.txt
+
 # Keep Kotlin Metadata
 -keepclassmembers class * {
     @kotlin.jvm.JvmField *;

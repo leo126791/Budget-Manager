@@ -10,6 +10,8 @@ android {
         version = release(37)
     }
 
+    layout.buildDirectory.set(file("build_v12"))
+
     defaultConfig {
         applicationId = "com.budgetmanager.debit.app"
         minSdk = 24
