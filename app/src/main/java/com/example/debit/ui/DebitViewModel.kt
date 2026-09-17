@@ -38,11 +38,53 @@ private data class DataTuple(
     val subscriptions: List<Subscription>
 )
 
+private data class Tuple1(
+    val ym: String,
+    val theme: AppThemeColor,
+    val lang: AppLanguage,
+    val query: String,
+    val beta: Boolean
+)
+
+private data class Tuple2(
+    val gPay: Boolean,
+    val dailyReminder: Boolean,
+    val reminders: List<ReminderTime>,
+    val income: Boolean,
+    val search: Boolean
+)
+
+private data class Tuple3(
+    val sub: Boolean,
+    val multi: Boolean,
+    val m3d: Boolean,
+    val dragDate: Boolean,
+    val autoBackup: Boolean
+)
+
+private data class Tuple4(
+    val lastBackup: Long,
+    val init: Boolean
+)
+
 private data class PrefsTuple(
     val selectedYM: String,
     val themeColor: AppThemeColor,
     val language: AppLanguage,
-    val searchQuery: String
+    val searchQuery: String,
+    val betaEnabled: Boolean,
+    val googlePayEnabled: Boolean,
+    val dailyReminderEnabled: Boolean,
+    val reminderTimesList: List<ReminderTime>,
+    val incomeEnabled: Boolean,
+    val searchEnabled: Boolean,
+    val subscriptionEnabled: Boolean,
+    val multiAccountEnabled: Boolean,
+    val modern3DUiEnabled: Boolean,
+    val dragDateReorderEnabled: Boolean,
+    val autoBackupOn: Boolean,
+    val lastBackupTime: Long,
+    val initialized: Boolean
 )
 
 data class DebitUiState(
@@ -191,6 +233,44 @@ class DebitViewModel(
         }
     }
 
+    private val flow1 = combine(_selectedYearMonth, _themeColor, _appLanguage, _searchQuery, _betaTestingEnabled) { ym, theme, lang, query, beta ->
+        Tuple1(ym, theme, lang, query, beta)
+    }
+
+    private val flow2 = combine(_googlePayListenerEnabled, _dailyReminderEnabled, _reminderTimes, _incomeTrackingEnabled, _searchEnabled) { gPay, dailyReminder, reminders, income, search ->
+        Tuple2(gPay, dailyReminder, reminders, income, search)
+    }
+
+    private val flow3 = combine(_subscriptionEnabled, _multiAccountEnabled, _modern3DUiEnabled, _dragDateReorderEnabled, _autoBackupEnabled) { sub, multi, m3d, dragDate, autoBackup ->
+        Tuple3(sub, multi, m3d, dragDate, autoBackup)
+    }
+
+    private val flow4 = combine(_lastAutoBackupTime, _isInitialized) { lastBackup, init ->
+        Tuple4(lastBackup, init)
+    }
+
+    private val settingsTupleFlow = combine(flow1, flow2, flow3, flow4) { t1, t2, t3, t4 ->
+        PrefsTuple(
+            selectedYM = t1.ym,
+            themeColor = t1.theme,
+            language = t1.lang,
+            searchQuery = t1.query,
+            betaEnabled = t1.beta,
+            googlePayEnabled = t2.gPay,
+            dailyReminderEnabled = t2.dailyReminder,
+            reminderTimesList = t2.reminders,
+            incomeEnabled = t2.income,
+            searchEnabled = t2.search,
+            subscriptionEnabled = t3.sub,
+            multiAccountEnabled = t3.multi,
+            modern3DUiEnabled = t3.m3d,
+            dragDateReorderEnabled = t3.dragDate,
+            autoBackupOn = t3.autoBackup,
+            lastBackupTime = t4.lastBackup,
+            initialized = t4.init
+        )
+    }
+
     val uiState: StateFlow<DebitUiState> = combine(
         combine(
             repository.allTransactions,
@@ -199,30 +279,29 @@ class DebitViewModel(
         ) { txs, budget, subs ->
             DataTuple(txs, budget, subs)
         },
-        combine(
-            _selectedYearMonth,
-            _themeColor,
-            _appLanguage,
-            _searchQuery
-        ) { ym, theme, lang, query ->
-            PrefsTuple(ym, theme, lang, query)
-        }
+        settingsTupleFlow
     ) { dataTuple, prefsTuple ->
         val (transactions, globalBudget, subscriptions) = dataTuple
-        val (selectedYM, themeColor, language, query) = prefsTuple
+        val selectedYM = prefsTuple.selectedYM
+        val themeColor = prefsTuple.themeColor
+        val language = prefsTuple.language
+        val query = prefsTuple.searchQuery
 
-        val betaEnabled = _betaTestingEnabled.value
-        val googlePayEnabled = betaEnabled && _googlePayListenerEnabled.value
-        val incomeEnabled = betaEnabled && _incomeTrackingEnabled.value
-        val searchEnabled = betaEnabled && _searchEnabled.value
-        val subscriptionEnabled = betaEnabled && _subscriptionEnabled.value
-        val multiAccountEnabled = betaEnabled && _multiAccountEnabled.value
-        val modern3DUiEnabled = betaEnabled && _modern3DUiEnabled.value
-        val dragDateReorderEnabled = betaEnabled && _dragDateReorderEnabled.value
+        val betaEnabled = prefsTuple.betaEnabled
+        val googlePayEnabled = prefsTuple.googlePayEnabled
+        val dailyReminderEnabled = prefsTuple.dailyReminderEnabled
+        val reminderTimesList = prefsTuple.reminderTimesList
 
-        val autoBackupOn = _autoBackupEnabled.value
-        val lastBackupTime = _lastAutoBackupTime.value
-        val initialized = _isInitialized.value
+        val incomeEnabled = betaEnabled && prefsTuple.incomeEnabled
+        val searchEnabled = betaEnabled && prefsTuple.searchEnabled
+        val subscriptionEnabled = betaEnabled && prefsTuple.subscriptionEnabled
+        val multiAccountEnabled = betaEnabled && prefsTuple.multiAccountEnabled
+        val modern3DUiEnabled = betaEnabled && prefsTuple.modern3DUiEnabled
+        val dragDateReorderEnabled = betaEnabled && prefsTuple.dragDateReorderEnabled
+
+        val autoBackupOn = prefsTuple.autoBackupOn
+        val lastBackupTime = prefsTuple.lastBackupTime
+        val initialized = prefsTuple.initialized
 
         val currentMonthTransactions = transactions.filter {
             DateFormatUtils.formatYM(Date(it.date)) == selectedYM
