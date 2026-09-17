@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.Transaction
+import com.example.debit.data.TransactionType
 import com.example.debit.ui.screens.DateGroup
 import com.example.debit.ui.utils.AppStrings
 import com.example.debit.ui.utils.getCategoryIcon
@@ -370,11 +372,15 @@ fun DailyBreakdownDialog(
                                                         }
                                                     }
 
+                                                    val isIncome = tx.type == TransactionType.INCOME
+                                                    val sign = if (isIncome) "+" else "-"
+                                                    val amountColor = if (isIncome) Color(0xFF059669) else MaterialTheme.colorScheme.onSurface
+
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         Text(
-                                                            text = "$${String.format(Locale.getDefault(), "%,.0f", tx.amount)}",
+                                                            text = "$sign$${String.format(Locale.getDefault(), "%,.0f", tx.amount)}",
                                                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                                            color = MaterialTheme.colorScheme.onSurface
+                                                            color = amountColor
                                                         )
                                                         Spacer(modifier = Modifier.width(4.dp))
                                                         Icon(

@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.Transaction
+import com.example.debit.data.TransactionType
 import com.example.debit.ui.utils.AppStrings
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -307,10 +308,12 @@ private fun DailyUsageChartContent(
     val dayFormat = SimpleDateFormat("d", Locale.getDefault())
 
     transactions.forEach { tx ->
-        val txYM = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(tx.date))
-        if (txYM == currentYM) {
-            val dayInt = dayFormat.format(Date(tx.date)).toIntOrNull() ?: 1
-            dailyMap[dayInt] = (dailyMap[dayInt] ?: 0.0) + tx.amount
+        if (tx.type == TransactionType.EXPENSE) {
+            val txYM = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(tx.date))
+            if (txYM == currentYM) {
+                val dayInt = dayFormat.format(Date(tx.date)).toIntOrNull() ?: 1
+                dailyMap[dayInt] = (dailyMap[dayInt] ?: 0.0) + tx.amount
+            }
         }
     }
 
@@ -480,10 +483,12 @@ fun ExpenseTrendLineChartCard(
                     for (d in 1..daysInMonth) dailyMap[d] = 0.0
 
                     transactions.forEach { tx ->
-                        val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
-                        if (calTx.get(Calendar.YEAR) == currentYear && calTx.get(Calendar.MONTH) == currentMonth) {
-                            val day = calTx.get(Calendar.DAY_OF_MONTH)
-                            dailyMap[day] = (dailyMap[day] ?: 0.0) + tx.amount
+                        if (tx.type == TransactionType.EXPENSE) {
+                            val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
+                            if (calTx.get(Calendar.YEAR) == currentYear && calTx.get(Calendar.MONTH) == currentMonth) {
+                                val day = calTx.get(Calendar.DAY_OF_MONTH)
+                                dailyMap[day] = (dailyMap[day] ?: 0.0) + tx.amount
+                            }
                         }
                     }
                     dailyMap.entries.map { "${it.key}日" to it.value }
@@ -497,9 +502,11 @@ fun ExpenseTrendLineChartCard(
                         monthlyMap[ymFormat.format(calPast.time)] = 0.0
                     }
                     transactions.forEach { tx ->
-                        val ym = ymFormat.format(Date(tx.date))
-                        if (monthlyMap.containsKey(ym)) {
-                            monthlyMap[ym] = (monthlyMap[ym] ?: 0.0) + tx.amount
+                        if (tx.type == TransactionType.EXPENSE) {
+                            val ym = ymFormat.format(Date(tx.date))
+                            if (monthlyMap.containsKey(ym)) {
+                                monthlyMap[ym] = (monthlyMap[ym] ?: 0.0) + tx.amount
+                            }
                         }
                     }
                     monthlyMap.entries.map { (ym, amount) ->
