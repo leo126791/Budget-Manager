@@ -41,25 +41,45 @@ object ReminderUtils {
         val requestCode = getRequestCode(reminder)
         val pendingIntent = PendingIntent.getBroadcast(context, requestCode, intent, flags)
 
+        val now = System.currentTimeMillis()
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, reminder.hour)
             set(Calendar.MINUTE, reminder.minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) {
+
+            if (timeInMillis < now - 60_000L) {
+                // Time is in the past (earlier than 1 minute ago), schedule for tomorrow
                 add(Calendar.DAY_OF_YEAR, 1)
+            } else if (timeInMillis <= now) {
+                // Time is within current minute, trigger in 2 seconds
+                timeInMillis = now + 2_000L
             }
         }
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setAndAllowWhileIdle(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        calendar.timeInMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        calendar.timeInMillis,
+                        pendingIntent
+                    )
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     calendar.timeInMillis,
                     pendingIntent
                 )
             } else {
-                alarmManager.set(
+                alarmManager.setExact(
                     AlarmManager.RTC_WAKEUP,
                     calendar.timeInMillis,
                     pendingIntent
