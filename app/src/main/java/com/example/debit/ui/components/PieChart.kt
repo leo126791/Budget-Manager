@@ -55,6 +55,7 @@ import com.example.debit.data.AppLanguage
 import com.example.debit.data.Transaction
 import com.example.debit.data.TransactionType
 import com.example.debit.ui.utils.AppStrings
+import com.example.debit.ui.utils.DateFormatUtils
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -298,20 +299,20 @@ private fun DailyUsageChartContent(
     val calendar = Calendar.getInstance()
     val today = calendar.get(Calendar.DAY_OF_MONTH)
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val currentYM = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
+    val currentYM = DateFormatUtils.formatYM(Date())
 
     val dailyMap = mutableMapOf<Int, Double>()
     for (day in 1..daysInMonth) {
         dailyMap[day] = 0.0
     }
 
-    val dayFormat = SimpleDateFormat("d", Locale.getDefault())
-
+    val calTx = Calendar.getInstance()
     transactions.forEach { tx ->
         if (tx.type == TransactionType.EXPENSE) {
-            val txYM = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(tx.date))
+            val txYM = DateFormatUtils.formatYM(Date(tx.date))
             if (txYM == currentYM) {
-                val dayInt = dayFormat.format(Date(tx.date)).toIntOrNull() ?: 1
+                calTx.timeInMillis = tx.date
+                val dayInt = calTx.get(Calendar.DAY_OF_MONTH)
                 dailyMap[dayInt] = (dailyMap[dayInt] ?: 0.0) + tx.amount
             }
         }

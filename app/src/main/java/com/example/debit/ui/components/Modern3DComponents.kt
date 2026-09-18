@@ -51,6 +51,7 @@ import com.example.debit.data.AppLanguage
 import com.example.debit.data.Transaction
 import com.example.debit.data.TransactionType
 import com.example.debit.ui.utils.AppStrings
+import com.example.debit.ui.utils.DateFormatUtils
 import com.example.debit.ui.utils.OrganicShapeChip
 import com.example.debit.ui.utils.OrganicShapeMedium
 import com.example.debit.ui.utils.bouncyClickable
@@ -529,7 +530,7 @@ fun Modern3DTransactionItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(transaction.date))
+    val timeStr = DateFormatUtils.formatHM(Date(transaction.date))
     val localizedCategory = AppStrings.getCategoryName(transaction.category, language)
     val localizedNote = if (transaction.note.isNotBlank()) {
         transaction.note.split(" • ").joinToString(" • ") { AppStrings.getSubCategoryName(it, language) }

@@ -44,6 +44,7 @@ import com.example.debit.data.AppLanguage
 import com.example.debit.data.TransactionType
 import com.example.debit.ui.screens.DateGroup
 import com.example.debit.ui.utils.AppStrings
+import com.example.debit.ui.utils.DateFormatUtils
 import com.example.debit.ui.utils.getCategoryIcon
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -318,7 +319,7 @@ fun MonthlyBreakdownDialog(
                                                                 )
                                                             }
 
-                                                            val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(tx.date))
+                                                            val timeStr = DateFormatUtils.formatHM(Date(tx.date))
                                                             val localizedNote = tx.note.split(" • ").joinToString(" • ") { AppStrings.getSubCategoryName(it, language) }
                                                             val detailText = when {
                                                                 localizedNote.isNotBlank() -> "$timeStr • $localizedNote"
