@@ -5,11 +5,11 @@ import androidx.compose.ui.graphics.Color
 import java.util.UUID
 
 enum class AppThemeColor(val displayNameZh: String, val displayNameEn: String, val primaryColor: Color, val containerColor: Color) {
-    INDIGO("經典靛藍", "Indigo", Color(0xFF4F46E5), Color(0xFFEEF2FF)),
-    EMERALD("翡翠綠", "Emerald Green", Color(0xFF059669), Color(0xFFECFDF5)),
-    TEAL("電光藍", "Electric Blue", Color(0xFF0284C7), Color(0xFFE0F2FE)),
-    ROSE("玫瑰紅", "Rose Pink", Color(0xFFE11D48), Color(0xFFFFE4E6)),
-    SLATE("深夜灰", "Dark Slate", Color(0xFF475569), Color(0xFFF1F5F9))
+    INDIGO("靛藍", "Indigo", Color(0xFF4F46E5), Color(0xFFEEF2FF)),
+    EMERALD("綠色", "Green", Color(0xFF059669), Color(0xFFECFDF5)),
+    TEAL("藍色", "Blue", Color(0xFF0284C7), Color(0xFFE0F2FE)),
+    ROSE("紅色", "Red", Color(0xFFE11D48), Color(0xFFFFE4E6)),
+    SLATE("灰色", "Gray", Color(0xFF475569), Color(0xFFF1F5F9))
 }
 
 val AppThemeColor.primaryColorInt: Int
