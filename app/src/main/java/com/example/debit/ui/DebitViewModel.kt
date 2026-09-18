@@ -104,6 +104,8 @@ data class DebitUiState(
     val searchQuery: String = "",
     val subscriptions: List<Subscription> = emptyList(),
     val totalSubscriptionsMonthly: Double = 0.0,
+    val totalFixedIncomeMonthly: Double = 0.0,
+    val totalFixedExpenseMonthly: Double = 0.0,
     val isBetaTestingEnabled: Boolean = false,
     val isGooglePayListenerEnabled: Boolean = false,
     val isDailyReminderEnabled: Boolean = false,
@@ -216,13 +218,17 @@ class DebitViewModel(
                     }
 
                     if (!alreadyBilled) {
+                        val isIncome = sub.type == TransactionType.INCOME
+                        val noteText = if (isIncome) "固定收入: ${sub.name}" else "固定扣款: ${sub.name}"
+                        val categoryText = if (isIncome) sub.category.ifBlank { "薪水" } else sub.category.ifBlank { "日常" }
+
                         repository.addTransaction(
                             Transaction(
                                 amount = sub.amount,
-                                category = "日常",
-                                note = "固定扣款: ${sub.name}",
+                                category = categoryText,
+                                note = noteText,
                                 date = System.currentTimeMillis(),
-                                type = TransactionType.EXPENSE
+                                type = sub.type
                             )
                         )
                         BudgetWidgetProvider.updateAllWidgets(getApplication())
@@ -343,7 +349,8 @@ class DebitViewModel(
         }
 
         val totalBgt = globalBudget?.amountLimit ?: 0.0
-        val monthlySubs = subscriptions.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
+        val monthlyFixedIncome = subscriptions.filter { it.type == TransactionType.INCOME }.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
+        val monthlyFixedExpense = subscriptions.filter { it.type == TransactionType.EXPENSE }.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
 
         val monthsInDb = transactions.map {
             DateFormatUtils.formatYM(Date(it.date))
@@ -366,7 +373,9 @@ class DebitViewModel(
             appLanguage = language,
             searchQuery = query,
             subscriptions = subscriptions,
-            totalSubscriptionsMonthly = monthlySubs,
+            totalSubscriptionsMonthly = monthlyFixedExpense,
+            totalFixedIncomeMonthly = monthlyFixedIncome,
+            totalFixedExpenseMonthly = monthlyFixedExpense,
             isBetaTestingEnabled = betaEnabled,
             isGooglePayListenerEnabled = googlePayEnabled,
             isDailyReminderEnabled = _dailyReminderEnabled.value,
@@ -574,9 +583,27 @@ class DebitViewModel(
         }
     }
 
-    fun addSubscription(name: String, amount: Double, billingDay: Int, billingMonth: Int = 1, isAnnual: Boolean = false) {
+    fun addSubscription(
+        name: String,
+        amount: Double,
+        billingDay: Int,
+        billingMonth: Int = 1,
+        isAnnual: Boolean = false,
+        type: TransactionType = TransactionType.EXPENSE,
+        category: String = "日常"
+    ) {
         viewModelScope.launch {
-            repository.addSubscription(Subscription(name = name, amount = amount, billingDay = billingDay, billingMonth = billingMonth, isAnnual = isAnnual))
+            repository.addSubscription(
+                Subscription(
+                    name = name,
+                    amount = amount,
+                    billingDay = billingDay,
+                    billingMonth = billingMonth,
+                    isAnnual = isAnnual,
+                    type = type,
+                    category = category
+                )
+            )
         }
     }
 

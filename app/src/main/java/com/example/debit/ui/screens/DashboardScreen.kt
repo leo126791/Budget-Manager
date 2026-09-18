@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoneyOff
 import androidx.compose.material.icons.filled.PieChart
@@ -722,7 +723,7 @@ fun DashboardScreen(
                     ) {
                         item { Spacer(modifier = Modifier.height(4.dp)) }
 
-                        // Subscriptions Card
+                        // Subscriptions & Recurring Income/Expense Card
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -740,15 +741,32 @@ fun DashboardScreen(
                                     ) {
                                         Column {
                                             Text(
-                                                text = if (lang == AppLanguage.ZH) "🔁 訂閱與定期扣款" else "🔁 Subscriptions",
+                                                text = if (lang == AppLanguage.ZH) "固定收支與定期扣款" else "Recurring Income & Expenses",
                                                 style = MaterialTheme.typography.titleLarge,
                                                 fontWeight = FontWeight.Bold
                                             )
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "月估算總額: $${String.format(Locale.getDefault(), "%,.0f", uiState.totalSubscriptionsMonthly)}/月" else "Est. Monthly: $${String.format(Locale.getDefault(), "%,.0f", uiState.totalSubscriptionsMonthly)}/mo",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = if (lang == AppLanguage.ZH)
+                                                        "固定收入: +$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly)}/月"
+                                                    else
+                                                        "Income: +$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly)}/mo",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF059669)
+                                                )
+                                                Text(
+                                                    text = if (lang == AppLanguage.ZH)
+                                                        "固定支出: -$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedExpenseMonthly)}/月"
+                                                    else
+                                                        "Expense: -$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedExpenseMonthly)}/mo",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
 
                                         FilledTonalButton(
@@ -756,7 +774,7 @@ fun DashboardScreen(
                                             shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Text(
-                                                text = if (lang == AppLanguage.ZH) "➕ 新增扣款" else "➕ Add",
+                                                text = if (lang == AppLanguage.ZH) "新增固定收支" else "Add Item",
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp
                                             )
@@ -776,7 +794,7 @@ fun DashboardScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    text = if (lang == AppLanguage.ZH) "尚無固定訂閱或定期扣款項目" else "No active subscriptions",
+                                                    text = if (lang == AppLanguage.ZH) "尚無固定收支或定期扣款項目" else "No recurring income or expenses",
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -784,18 +802,37 @@ fun DashboardScreen(
                                         }
                                     } else {
                                         uiState.subscriptions.forEach { sub ->
-                                            val cycleTag = if (sub.isAnnual) (if (lang == AppLanguage.ZH) "年繳" else "Annual") else (if (lang == AppLanguage.ZH) "月繳" else "Monthly")
-                                            val dateDetailStr = if (sub.isAnnual) {
-                                                if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日扣款" else "Annual billing on ${sub.billingMonth}/${sub.billingDay}"
+                                            val isIncome = sub.type == TransactionType.INCOME
+                                            val typeTag = if (isIncome) {
+                                                if (lang == AppLanguage.ZH) "固定收入" else "Recurring Income"
                                             } else {
-                                                if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日扣款" else "Monthly billing on day ${sub.billingDay}"
+                                                if (sub.isAnnual) (if (lang == AppLanguage.ZH) "固定支出 (年繳)" else "Annual Expense") else (if (lang == AppLanguage.ZH) "固定支出" else "Recurring Expense")
                                             }
+
+                                            val dateDetailStr = if (sub.isAnnual) {
+                                                if (isIncome) {
+                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日入帳" else "Annual income on ${sub.billingMonth}/${sub.billingDay}"
+                                                } else {
+                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日扣款" else "Annual billing on ${sub.billingMonth}/${sub.billingDay}"
+                                                }
+                                            } else {
+                                                if (isIncome) {
+                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日入帳" else "Monthly income on day ${sub.billingDay}"
+                                                } else {
+                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日扣款" else "Monthly billing on day ${sub.billingDay}"
+                                                }
+                                            }
+
                                             val amountText = if (sub.isAnnual) {
                                                 val monthlyAvg = sub.amount / 12.0
-                                                "$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年 (約 $${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
+                                                val prefix = if (isIncome) "+" else "-"
+                                                "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年 (約 $prefix$${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
                                             } else {
-                                                "$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/月"
+                                                val prefix = if (isIncome) "+" else "-"
+                                                "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/月"
                                             }
+
+                                            val amountColor = if (isIncome) Color(0xFF059669) else MaterialTheme.colorScheme.primary
 
                                             Surface(
                                                 shape = RoundedCornerShape(16.dp),
@@ -816,13 +853,13 @@ fun DashboardScreen(
                                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                                             Surface(
                                                                 shape = RoundedCornerShape(6.dp),
-                                                                color = if (sub.isAnnual) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                                                color = if (isIncome) Color(0xFFD1FAE5) else (if (sub.isAnnual) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer)
                                                             ) {
                                                                 Text(
-                                                                    text = cycleTag,
+                                                                    text = typeTag,
                                                                     style = MaterialTheme.typography.labelSmall,
                                                                     fontWeight = FontWeight.Bold,
-                                                                    color = if (sub.isAnnual) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                                                                    color = if (isIncome) Color(0xFF065F46) else (if (sub.isAnnual) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer),
                                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                                 )
                                                             }
@@ -842,7 +879,7 @@ fun DashboardScreen(
                                                             text = amountText,
                                                             style = MaterialTheme.typography.titleMedium,
                                                             fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.primary
+                                                            color = amountColor
                                                         )
                                                     }
 
@@ -991,13 +1028,15 @@ fun DashboardScreen(
         AddSubscriptionDialog(
             language = lang,
             onDismissRequest = { showAddSubscriptionDialog = false },
-            onSaveSubscription = { name, amount, billingDay, billingMonth, isAnnual ->
+            onSaveSubscription = { name, amount, billingDay, billingMonth, isAnnual, type, category ->
                 viewModel.addSubscription(
                     name = name,
                     amount = amount,
                     billingDay = billingDay,
                     billingMonth = billingMonth,
-                    isAnnual = isAnnual
+                    isAnnual = isAnnual,
+                    type = type,
+                    category = category
                 )
             }
         )
@@ -1482,13 +1521,14 @@ fun EmptyTransactionsCard(language: AppLanguage, onAddClick: () -> Unit) {
 fun AddSubscriptionDialog(
     language: AppLanguage,
     onDismissRequest: () -> Unit,
-    onSaveSubscription: (name: String, amount: Double, billingDay: Int, billingMonth: Int, isAnnual: Boolean) -> Unit
+    onSaveSubscription: (name: String, amount: Double, billingDay: Int, billingMonth: Int, isAnnual: Boolean, type: TransactionType, category: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var billingMonthText by remember { mutableStateOf("1") }
     var billingDayText by remember { mutableStateOf("1") }
     var isAnnual by remember { mutableStateOf(false) }
+    var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
     var isError by remember { mutableStateOf(false) }
 
     val isZh = language == AppLanguage.ZH
@@ -1496,31 +1536,58 @@ fun AddSubscriptionDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = {
-            Text(if (isZh) "➕ 新增固定訂閱扣款" else "Add Subscription", style = MaterialTheme.typography.titleLarge)
+            Text(
+                if (isZh) "新增固定收支" else "Add Recurring Item",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = transactionType == TransactionType.EXPENSE,
+                        onClick = { transactionType = TransactionType.EXPENSE },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text(if (isZh) "固定支出" else "Expense")
+                    }
+                    SegmentedButton(
+                        selected = transactionType == TransactionType.INCOME,
+                        onClick = { transactionType = TransactionType.INCOME },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(if (isZh) "固定收入" else "Income")
+                    }
+                }
+
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         selected = !isAnnual,
                         onClick = { isAnnual = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
-                        Text(if (isZh) "按月扣款" else "Monthly")
+                        Text(if (isZh) "按月發放/扣款" else "Monthly")
                     }
                     SegmentedButton(
                         selected = isAnnual,
                         onClick = { isAnnual = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
-                        Text(if (isZh) "按年扣款" else "Annual")
+                        Text(if (isZh) "按年發放/扣款" else "Annual")
                     }
                 }
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; isError = false },
-                    label = { Text(if (isZh) "訂閱服務名稱 (例如 Netflix)" else "Service Name") },
+                    label = {
+                        Text(
+                            if (isZh) {
+                                if (transactionType == TransactionType.INCOME) "項目名稱 (例如 薪水, 租金收入)" else "項目名稱 (例如 房租, Netflix)"
+                            } else "Item Name"
+                        )
+                    },
                     singleLine = true,
                     isError = isError,
                     modifier = Modifier.fillMaxWidth()
@@ -1529,7 +1596,13 @@ fun AddSubscriptionDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it; isError = false },
-                    label = { Text(if (isZh) "扣款金額 ($)" else "Amount ($)") },
+                    label = {
+                        Text(
+                            if (isZh) {
+                                if (transactionType == TransactionType.INCOME) "收入金額 ($)" else "扣款金額 ($)"
+                            } else "Amount ($)"
+                        )
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     isError = isError,
@@ -1541,7 +1614,13 @@ fun AddSubscriptionDialog(
                         OutlinedTextField(
                             value = billingMonthText,
                             onValueChange = { billingMonthText = it },
-                            label = { Text(if (isZh) "扣款月份 (1-12)" else "Month (1-12)") },
+                            label = {
+                                Text(
+                                    if (isZh) {
+                                        if (transactionType == TransactionType.INCOME) "入帳月份 (1-12)" else "扣款月份 (1-12)"
+                                    } else "Month (1-12)"
+                                )
+                            },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
@@ -1551,7 +1630,13 @@ fun AddSubscriptionDialog(
                     OutlinedTextField(
                         value = billingDayText,
                         onValueChange = { billingDayText = it },
-                        label = { Text(if (isZh) "扣款日期 (1-31)" else "Day (1-31)") },
+                        label = {
+                            Text(
+                                if (isZh) {
+                                    if (transactionType == TransactionType.INCOME) "入帳日期 (1-31)" else "扣款日期 (1-31)"
+                                } else "Day (1-31)"
+                            )
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -1565,9 +1650,10 @@ fun AddSubscriptionDialog(
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     val day = billingDayText.toIntOrNull()?.coerceIn(1, 31) ?: 1
                     val month = billingMonthText.toIntOrNull()?.coerceIn(1, 12) ?: 1
+                    val defaultCat = if (transactionType == TransactionType.INCOME) "薪水" else "日常"
 
                     if (name.isNotBlank() && amount > 0) {
-                        onSaveSubscription(name, amount, day, month, isAnnual)
+                        onSaveSubscription(name, amount, day, month, isAnnual, transactionType, defaultCat)
                         onDismissRequest()
                     } else {
                         isError = true

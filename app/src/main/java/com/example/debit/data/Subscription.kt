@@ -15,5 +15,7 @@ data class Subscription(
     val billingMonth: Int = 1, // Month of year (1-12) for annual
     val category: String = "日常",
     @ColumnInfo(defaultValue = "0")
-    val isAnnual: Boolean = false
+    val isAnnual: Boolean = false,
+    @ColumnInfo(defaultValue = "EXPENSE")
+    val type: TransactionType = TransactionType.EXPENSE
 )
