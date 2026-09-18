@@ -29,7 +29,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private val recentPaymentsCache = mutableListOf<RecentPayment>()
-        private const val DEDUPLICATION_WINDOW_MS = 60_000L // 60 seconds time window for duplicate payment notifications
+        private const val DEDUPLICATION_WINDOW_MS = 120_000L // 120 seconds time window for duplicate payment notifications
 
         fun isPermissionGranted(context: Context): Boolean {
             val packageName = context.packageName
@@ -101,44 +101,43 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val currentTime = System.currentTimeMillis()
 
-        // 4. In-Memory Deduplication Check (Window: 60s)
+        // 4. Synchronous In-Memory Deduplication Check (Window: 120s)
+        // Add to cache IMMEDIATELY and synchronously on thread entry to prevent race conditions
         synchronized(recentPaymentsCache) {
             recentPaymentsCache.removeAll { currentTime - it.timestamp > DEDUPLICATION_WINDOW_MS }
             val isInMemoryDuplicate = recentPaymentsCache.any {
                 abs(it.amount - amount) < 0.01 && (currentTime - it.timestamp) < DEDUPLICATION_WINDOW_MS
             }
             if (isInMemoryDuplicate) {
-                Log.d("PaymentService", "Duplicate payment detected in cache ($amount within 60s). Skipping.")
+                Log.d("PaymentService", "Duplicate payment detected in cache ($amount within 120s). Skipping.")
                 return
             }
+            // Reserve in cache immediately before launching background coroutine
+            recentPaymentsCache.add(RecentPayment(amount, currentTime))
         }
 
         val merchantName = extractMerchant(title, text)
         val category = inferCategory(combined, merchantName)
         val isZh = settingsPrefs.getLanguage() == AppLanguage.ZH
+        val paymentSource = if (combined.contains("LINE") || packageName.contains("line")) "LINE Pay" else "Google Pay"
 
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getDatabase(context)
 
-            // 5. Database Deduplication Check (Window: 60s)
+            // 5. Database Deduplication Check (Window: 120s)
             val startTime = currentTime - DEDUPLICATION_WINDOW_MS
             val recentTxs = db.transactionDao().getRecentTransactions(startTime, currentTime + 5_000L)
             val isDbDuplicate = recentTxs.any { abs(it.amount - amount) < 0.01 }
 
             if (isDbDuplicate) {
-                Log.d("PaymentService", "Duplicate payment detected in DB ($amount within 60s). Skipping.")
+                Log.d("PaymentService", "Duplicate payment detected in DB ($amount within 120s). Skipping.")
                 return@launch
             }
 
-            // Cache new payment
-            synchronized(recentPaymentsCache) {
-                recentPaymentsCache.add(RecentPayment(amount, currentTime))
-            }
-
-            val transactionNote = if (merchantName.isNotBlank()) {
-                "Google Pay • $merchantName"
+            val transactionNote = if (merchantName.isNotBlank() && merchantName != paymentSource) {
+                "$paymentSource • $merchantName"
             } else {
-                if (isZh) "Google Pay 自動捕捉" else "Google Pay Auto-Captured"
+                if (isZh) "$paymentSource 自動捕捉" else "$paymentSource Auto-Captured"
             }
 
             val newTx = Transaction(
@@ -148,19 +147,19 @@ class PaymentNotificationListenerService : NotificationListenerService() {
                 date = currentTime,
                 note = transactionNote,
                 locationName = merchantName,
-                accountName = "Google Pay"
+                accountName = paymentSource
             )
 
             db.transactionDao().insertTransaction(newTx)
             BudgetWidgetProvider.updateAllWidgets(context)
 
-            Log.d("PaymentService", "Successfully recorded payment! Amount: $amount, Merchant: '$merchantName', Category: $category")
+            Log.d("PaymentService", "Successfully recorded payment! Amount: $amount, Source: $paymentSource, Merchant: '$merchantName', Category: $category")
 
             Handler(Looper.getMainLooper()).post {
                 val displayMsg = if (isZh) {
-                    "🎉 自動記錄 Google Pay 消費 $${amount.toInt()} ($category)"
+                    "🎉 自動記錄 $paymentSource 消費 $${amount.toInt()} ($category)"
                 } else {
-                    "🎉 Auto-recorded Google Pay: $${amount.toInt()} ($category)"
+                    "🎉 Auto-recorded $paymentSource: $${amount.toInt()} ($category)"
                 }
                 Toast.makeText(context, displayMsg, Toast.LENGTH_LONG).show()
             }
@@ -192,14 +191,18 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val knownMerchants = listOf(
             "7-ELEVEN", "7-11", "全家", "萊爾富", "OK超商", "全聯", "麥當勞", "摩斯漢堡",
             "肯德基", "星巴克", "家樂福", "寶雅", "大潤發", "中油", "台亞", "捷運", "公車",
-            "Uber", "Foodpanda", "55688", "蝦皮", "PChome", "momo", "統一超商"
+            "Uber", "Foodpanda", "55688", "蝦皮", "PChome", "momo", "統一超商", "LINE 錢包", "LINE Pay"
         )
         for (merchant in knownMerchants) {
             if (combined.contains(merchant, ignoreCase = true)) {
-                return if (merchant == "統一超商") "7-11" else merchant
+                return when (merchant) {
+                    "統一超商" -> "7-11"
+                    "LINE 錢包" -> "LINE Pay"
+                    else -> merchant
+                }
             }
         }
-        if (title.isNotBlank() && !title.contains("Google") && !title.contains("付款") && !title.contains("消費") && !title.contains("刷卡")) {
+        if (title.isNotBlank() && !title.contains("Google") && !title.contains("付款") && !title.contains("消費") && !title.contains("刷卡") && !title.contains("LINE")) {
             return title.trim()
         }
         return ""
