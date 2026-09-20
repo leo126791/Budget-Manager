@@ -80,6 +80,7 @@ fun ExpensePieChartCard(
     totalBudget: Double,
     transactions: List<Transaction>,
     language: AppLanguage,
+    selectedYearMonth: String = "",
     modifier: Modifier = Modifier
 ) {
     var selectedChartIndex by remember { mutableIntStateOf(0) }
@@ -136,7 +137,8 @@ fun ExpensePieChartCard(
                     DailyUsageChartContent(
                         transactions = transactions,
                         totalExpense = totalExpense,
-                        language = language
+                        language = language,
+                        selectedYearMonth = selectedYearMonth
                     )
                 }
             }
@@ -294,12 +296,25 @@ private fun DonutChartContent(
 private fun DailyUsageChartContent(
     transactions: List<Transaction>,
     totalExpense: Double,
-    language: AppLanguage
+    language: AppLanguage,
+    selectedYearMonth: String = ""
 ) {
-    val calendar = Calendar.getInstance()
-    val today = calendar.get(Calendar.DAY_OF_MONTH)
-    val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val currentYM = DateFormatUtils.formatYM(Date())
+    val ymParts = selectedYearMonth.split("-")
+    val calTarget = Calendar.getInstance().apply {
+        if (ymParts.size == 2) {
+            val y = ymParts[0].toIntOrNull()
+            val m = ymParts[1].toIntOrNull()
+            if (y != null && m != null) {
+                set(Calendar.YEAR, y)
+                set(Calendar.MONTH, m - 1)
+                set(Calendar.DAY_OF_MONTH, 1)
+            }
+        }
+    }
+
+    val daysInMonth = calTarget.getActualMaximum(Calendar.DAY_OF_MONTH)
+    val targetYear = calTarget.get(Calendar.YEAR)
+    val targetMonth = calTarget.get(Calendar.MONTH)
 
     val dailyMap = mutableMapOf<Int, Double>()
     for (day in 1..daysInMonth) {
@@ -309,9 +324,8 @@ private fun DailyUsageChartContent(
     val calTx = Calendar.getInstance()
     transactions.forEach { tx ->
         if (tx.type == TransactionType.EXPENSE) {
-            val txYM = DateFormatUtils.formatYM(Date(tx.date))
-            if (txYM == currentYM) {
-                calTx.timeInMillis = tx.date
+            calTx.timeInMillis = tx.date
+            if (calTx.get(Calendar.YEAR) == targetYear && calTx.get(Calendar.MONTH) == targetMonth) {
                 val dayInt = calTx.get(Calendar.DAY_OF_MONTH)
                 dailyMap[dayInt] = (dailyMap[dayInt] ?: 0.0) + tx.amount
             }
@@ -319,7 +333,12 @@ private fun DailyUsageChartContent(
     }
 
     val maxDaily = maxOf(1.0, dailyMap.values.maxOrNull() ?: 1.0)
-    val avgDaily = totalExpense / today
+    val activeDays = if (selectedYearMonth.isBlank() || selectedYearMonth == DateFormatUtils.formatYM(Date())) {
+        Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    } else {
+        daysInMonth
+    }
+    val avgDaily = if (activeDays > 0) totalExpense / activeDays else 0.0
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
@@ -368,6 +387,9 @@ private fun DailyUsageChartContent(
             val totalSpacing = spacing * (barCount + 1)
             val barWidth = maxOf(2f, (canvasWidth - totalSpacing) / barCount)
 
+            val isCurrentMonth = selectedYearMonth.isBlank() || selectedYearMonth == DateFormatUtils.formatYM(Date())
+            val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+
             for (d in 1..daysInMonth) {
                 val spent = dailyMap[d] ?: 0.0
                 val barHeight = ((spent / maxDaily) * (canvasHeight - 16.dp.toPx()) * animationProgress.value).toFloat()
@@ -375,7 +397,7 @@ private fun DailyUsageChartContent(
                 val y = canvasHeight - barHeight
 
                 val color = when {
-                    d == today -> activeBarColor
+                    isCurrentMonth && d == today -> activeBarColor
                     spent > 0 -> primaryColor
                     else -> trackColor
                 }
@@ -415,6 +437,7 @@ private fun DailyUsageChartContent(
 fun ExpenseTrendLineChartCard(
     transactions: List<Transaction>,
     language: AppLanguage,
+    selectedYearMonth: String = "",
     modifier: Modifier = Modifier
 ) {
     var isMonthlyMode by remember { mutableStateOf(false) }
@@ -473,20 +496,35 @@ fun ExpenseTrendLineChartCard(
                     )
                 }
             } else {
-                val calendar = Calendar.getInstance()
-                val currentYear = calendar.get(Calendar.YEAR)
-                val currentMonth = calendar.get(Calendar.MONTH)
-                val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val ymParts = selectedYearMonth.split("-")
+                val calTarget = Calendar.getInstance().apply {
+                    if (ymParts.size == 2) {
+                        val y = ymParts[0].toIntOrNull()
+                        val m = ymParts[1].toIntOrNull()
+                        if (y != null && m != null) {
+                            set(Calendar.YEAR, y)
+                            set(Calendar.MONTH, m - 1)
+                            set(Calendar.DAY_OF_MONTH, 1)
+                        }
+                    } else if (transactions.isNotEmpty()) {
+                        timeInMillis = transactions.first().date
+                    }
+                }
+
+                val targetYear = calTarget.get(Calendar.YEAR)
+                val targetMonth = calTarget.get(Calendar.MONTH)
+                val daysInMonth = calTarget.getActualMaximum(Calendar.DAY_OF_MONTH)
 
                 // Map data points
                 val dataPoints: List<Pair<String, Double>> = if (!isMonthlyMode) {
                     val dailyMap = mutableMapOf<Int, Double>()
                     for (d in 1..daysInMonth) dailyMap[d] = 0.0
 
+                    val calTx = Calendar.getInstance()
                     transactions.forEach { tx ->
                         if (tx.type == TransactionType.EXPENSE) {
-                            val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
-                            if (calTx.get(Calendar.YEAR) == currentYear && calTx.get(Calendar.MONTH) == currentMonth) {
+                            calTx.timeInMillis = tx.date
+                            if (calTx.get(Calendar.YEAR) == targetYear && calTx.get(Calendar.MONTH) == targetMonth) {
                                 val day = calTx.get(Calendar.DAY_OF_MONTH)
                                 dailyMap[day] = (dailyMap[day] ?: 0.0) + tx.amount
                             }
@@ -497,7 +535,7 @@ fun ExpenseTrendLineChartCard(
                     val monthlyMap = mutableMapOf<String, Double>()
                     val ymFormat = SimpleDateFormat("yyyy/MM", Locale.getDefault())
                     for (i in 5 downTo 0) {
-                        val calPast = Calendar.getInstance().apply {
+                        val calPast = (calTarget.clone() as Calendar).apply {
                             add(Calendar.MONTH, -i)
                         }
                         monthlyMap[ymFormat.format(calPast.time)] = 0.0

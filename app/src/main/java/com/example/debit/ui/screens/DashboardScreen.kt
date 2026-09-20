@@ -642,7 +642,8 @@ fun DashboardScreen(
                                     totalExpense = uiState.totalExpense,
                                     totalBudget = uiState.totalBudgetLimit,
                                     transactions = uiState.transactions,
-                                    language = lang
+                                    language = lang,
+                                    selectedYearMonth = uiState.currentYearMonth
                                 )
                             }
                         } else {
@@ -655,7 +656,8 @@ fun DashboardScreen(
                         item {
                             ExpenseTrendLineChartCard(
                                 transactions = uiState.transactions,
-                                language = lang
+                                language = lang,
+                                selectedYearMonth = uiState.currentYearMonth
                             )
                         }
 
