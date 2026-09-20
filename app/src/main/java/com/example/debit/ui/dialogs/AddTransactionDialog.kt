@@ -1,6 +1,7 @@
 package com.example.debit.ui.dialogs
 
 import android.Manifest
+import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
@@ -64,6 +66,7 @@ import com.example.debit.ui.utils.AppStrings
 import com.example.debit.ui.utils.GpsLocationUtils
 import com.example.debit.ui.utils.getCategoryIcon
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -144,6 +147,7 @@ fun AddTransactionDialog(
     var showDatePicker by remember { mutableStateOf(false) }
 
     val formattedDate = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(selectedDateMillis))
+    val formattedTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(selectedDateMillis))
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -306,33 +310,86 @@ fun AddTransactionDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Date Selection Card
+                // Date & Time Selection Section
                 Text(AppStrings.get("select_date", language), style = MaterialTheme.typography.labelMedium)
-                OutlinedCard(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    // Date Box (Left)
+                    OutlinedCard(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = AppStrings.get("select_date", language),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = formattedDate, style = MaterialTheme.typography.bodyLarge)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = AppStrings.get("select_date", language),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = formattedDate,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                        Text(
-                            text = AppStrings.get("change_date", language),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    }
+
+                    // Time Box (Right)
+                    OutlinedCard(
+                        onClick = {
+                            val cal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+                            val currentHour = cal.get(Calendar.HOUR_OF_DAY)
+                            val currentMinute = cal.get(Calendar.MINUTE)
+                            TimePickerDialog(
+                                context,
+                                { _, hourOfDay, minute ->
+                                    val updatedCal = Calendar.getInstance().apply {
+                                        timeInMillis = selectedDateMillis
+                                        set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                        set(Calendar.MINUTE, minute)
+                                    }
+                                    selectedDateMillis = updatedCal.timeInMillis
+                                },
+                                currentHour,
+                                currentMinute,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.AccessTime,
+                                    contentDescription = if (isZh) "選擇時間" else "Select Time",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = formattedTime,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -520,7 +577,18 @@ fun AddTransactionDialog(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
+                        datePickerState.selectedDateMillis?.let { newDateUtcMillis ->
+                            val oldCal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+                            val hour = oldCal.get(Calendar.HOUR_OF_DAY)
+                            val minute = oldCal.get(Calendar.MINUTE)
+
+                            val newCal = Calendar.getInstance().apply {
+                                timeInMillis = newDateUtcMillis
+                                set(Calendar.HOUR_OF_DAY, hour)
+                                set(Calendar.MINUTE, minute)
+                            }
+                            selectedDateMillis = newCal.timeInMillis
+                        }
                         showDatePicker = false
                     }
                 ) {
