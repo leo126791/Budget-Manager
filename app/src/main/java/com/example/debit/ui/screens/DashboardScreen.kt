@@ -966,6 +966,8 @@ fun DashboardScreen(
             initialTransaction = null,
             isMultiAccountEnabled = uiState.isMultiAccountEnabled,
             isIncomeTrackingEnabled = uiState.isIncomeTrackingEnabled,
+            onGetCustomSubCategories = { category -> viewModel.getCustomSubCategories(category) },
+            onAddCustomSubCategory = { category, sub -> viewModel.addCustomSubCategory(category, sub) },
             onDismissRequest = { showAddDialog = false },
             onConfirm = { amount, category, note, date, locationName, deductFromPool, accountName, type ->
                 viewModel.addTransaction(
@@ -987,6 +989,8 @@ fun DashboardScreen(
             initialTransaction = editingTransaction,
             isMultiAccountEnabled = uiState.isMultiAccountEnabled,
             isIncomeTrackingEnabled = uiState.isIncomeTrackingEnabled,
+            onGetCustomSubCategories = { category -> viewModel.getCustomSubCategories(category) },
+            onAddCustomSubCategory = { category, sub -> viewModel.addCustomSubCategory(category, sub) },
             onDismissRequest = { editingTransaction = null },
             onConfirm = { amount, category, note, date, locationName, deductFromPool, accountName, type ->
                 viewModel.updateTransaction(
