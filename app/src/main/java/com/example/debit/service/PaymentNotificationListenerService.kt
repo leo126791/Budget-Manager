@@ -80,17 +80,25 @@ class PaymentNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. Action & Currency Verification
-        val paymentKeywords = listOf(
-            "付款", "支付", "消費", "刷卡", "扣款", "交易", "Tap to pay", "Paid", "Spent"
+        // 2. Action & Currency Verification (Income vs Expense)
+        val incomeKeywords = listOf(
+            "入帳", "轉入", "存款", "存入", "退款", "退回", "撥款", "利息", "薪水", "收入",
+            "Refund", "Deposit", "Received"
         )
-        val hasPaymentAction = paymentKeywords.any { combined.contains(it) }
+        val expenseKeywords = listOf(
+            "付款", "支付", "消費", "刷卡", "扣款", "轉出", "提款", "支出", "Tap to pay", "Paid", "Spent"
+        )
+
+        val isIncomeNotif = incomeKeywords.any { combined.contains(it) }
+        val isExpenseNotif = expenseKeywords.any { combined.contains(it) } || combined.contains("交易")
         val hasCurrencySymbol = combined.contains("$") || combined.contains("NT$") || combined.contains("TWD") || combined.contains("元")
 
-        if (!hasPaymentAction || !hasCurrencySymbol) {
-            Log.d("PaymentService", "No payment action or currency symbol found. Skipping.")
+        if ((!isIncomeNotif && !isExpenseNotif) || !hasCurrencySymbol) {
+            Log.d("PaymentService", "No payment/income action or currency symbol found. Skipping.")
             return
         }
+
+        val transactionType = if (isIncomeNotif) TransactionType.INCOME else TransactionType.EXPENSE
 
         // 3. Extract Amount
         val amount = extractAmount(combined)
@@ -102,7 +110,6 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val currentTime = System.currentTimeMillis()
 
         // 4. Synchronous In-Memory Deduplication Check (Window: 120s)
-        // Add to cache IMMEDIATELY and synchronously on thread entry to prevent race conditions
         synchronized(recentPaymentsCache) {
             recentPaymentsCache.removeAll { currentTime - it.timestamp > DEDUPLICATION_WINDOW_MS }
             val isInMemoryDuplicate = recentPaymentsCache.any {
@@ -112,12 +119,11 @@ class PaymentNotificationListenerService : NotificationListenerService() {
                 Log.d("PaymentService", "Duplicate payment detected in cache ($amount within 120s). Skipping.")
                 return
             }
-            // Reserve in cache immediately before launching background coroutine
             recentPaymentsCache.add(RecentPayment(amount, currentTime))
         }
 
         val merchantName = extractMerchant(title, text)
-        val category = inferCategory(combined, merchantName)
+        val category = if (transactionType == TransactionType.INCOME) "薪水" else inferCategory(combined, merchantName)
         val isZh = settingsPrefs.getLanguage() == AppLanguage.ZH
         val paymentSource = if (combined.contains("LINE") || packageName.contains("line")) "LINE Pay" else "Google Pay"
 
@@ -137,13 +143,17 @@ class PaymentNotificationListenerService : NotificationListenerService() {
             val transactionNote = if (merchantName.isNotBlank() && merchantName != paymentSource) {
                 "$paymentSource • $merchantName"
             } else {
-                if (isZh) "$paymentSource 自動捕捉" else "$paymentSource Auto-Captured"
+                if (transactionType == TransactionType.INCOME) {
+                    if (isZh) "$paymentSource • 入帳" else "$paymentSource • Deposit"
+                } else {
+                    if (isZh) "$paymentSource 自動捕捉" else "$paymentSource Auto-Captured"
+                }
             }
 
             val newTx = Transaction(
                 amount = amount,
                 category = category,
-                type = TransactionType.EXPENSE,
+                type = transactionType,
                 date = currentTime,
                 note = transactionNote,
                 locationName = merchantName,
@@ -153,13 +163,13 @@ class PaymentNotificationListenerService : NotificationListenerService() {
             db.transactionDao().insertTransaction(newTx)
             BudgetWidgetProvider.updateAllWidgets(context)
 
-            Log.d("PaymentService", "Successfully recorded payment! Amount: $amount, Source: $paymentSource, Merchant: '$merchantName', Category: $category")
+            Log.d("PaymentService", "Successfully recorded payment! Type: $transactionType, Amount: $amount, Source: $paymentSource, Merchant: '$merchantName', Category: $category")
 
             Handler(Looper.getMainLooper()).post {
-                val displayMsg = if (isZh) {
-                    "🎉 自動記錄 $paymentSource 消費 $${amount.toInt()} ($category)"
+                val displayMsg = if (transactionType == TransactionType.INCOME) {
+                    if (isZh) "🎉 自動記錄 $paymentSource 收入 $${amount.toInt()}" else "🎉 Auto-recorded $paymentSource Income: $${amount.toInt()}"
                 } else {
-                    "🎉 Auto-recorded $paymentSource: $${amount.toInt()} ($category)"
+                    if (isZh) "🎉 自動記錄 $paymentSource 消費 $${amount.toInt()} ($category)" else "🎉 Auto-recorded $paymentSource Expense: $${amount.toInt()} ($category)"
                 }
                 Toast.makeText(context, displayMsg, Toast.LENGTH_LONG).show()
             }
@@ -169,7 +179,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
     private fun extractAmount(text: String): Double? {
         val patterns = listOf(
             Pattern.compile("""(?:NT\$|TWD|\$|新臺幣|新台幣)\s*([0-9,]+(?:\.[0-9]+)?)"""),
-            Pattern.compile("""(?:消費|付款|金額|支出|支付)\s*[:：]?\s*\$?\s*([0-9,]+(?:\.[0-9]+)?)"""),
+            Pattern.compile("""(?:消費|付款|金額|支出|支付|存入|入帳|轉入|退款)\s*[:：]?\s*\$?\s*([0-9,]+(?:\.[0-9]+)?)"""),
             Pattern.compile("""([0-9,]+(?:\.[0-9]+)?)\s*(?:元|TWD|\$)""")
         )
 
