@@ -1144,7 +1144,7 @@ private fun SettingsBodyList(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Budget Manager Beta v1.0.4",
+                text = "Budget Manager Beta v1.0.5",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
