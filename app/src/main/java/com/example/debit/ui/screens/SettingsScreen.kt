@@ -300,11 +300,6 @@ fun SettingsScreen(
                 multiAccountState = newMultiAcc
                 triggerAutoSave(multiAcc = newMultiAcc)
             },
-            modern3DUiState = modern3DUiState,
-            onModern3DUiChange = { new3D ->
-                modern3DUiState = new3D
-                triggerAutoSave(m3d = new3D)
-            },
             dragDateReorderState = dragDateReorderState,
             onDragDateReorderChange = { newDrag ->
                 dragDateReorderState = newDrag
@@ -405,8 +400,6 @@ private fun SettingsBodyList(
     onSearchChange: (Boolean) -> Unit,
     multiAccountState: Boolean,
     onMultiAccountChange: (Boolean) -> Unit,
-    modern3DUiState: Boolean,
-    onModern3DUiChange: (Boolean) -> Unit,
     dragDateReorderState: Boolean,
     onDragDateReorderChange: (Boolean) -> Unit,
     autoBackupState: Boolean,
@@ -817,10 +810,19 @@ private fun SettingsBodyList(
                         }
                     }
                 }
+            }
+        }
 
-                HorizontalDivider()
-
-                // Confirm Before Delete Switch
+        // 6. Confirm Before Delete Card (Standalone Card)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -847,7 +849,7 @@ private fun SettingsBodyList(
             }
         }
 
-        // 6. Beta Testing & Experimental Features Card
+        // 7. Beta Testing & Experimental Features Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -968,33 +970,6 @@ private fun SettingsBodyList(
                                 Switch(
                                     checked = multiAccountState,
                                     onCheckedChange = onMultiAccountChange
-                                )
-                            }
-
-                            HorizontalDivider()
-
-                            // 7. Modern 3D Hand-Drawn UI
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isZh) "測試版 UI" else "beta UI",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = if (isZh) "目前空空" else "none",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Switch(
-                                    checked = modern3DUiState,
-                                    onCheckedChange = onModern3DUiChange
                                 )
                             }
 
@@ -1181,7 +1156,7 @@ private fun SettingsBodyList(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Budget Manager Beta v1.0.5",
+                text = "Budget Manager Beta v1.0.6",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

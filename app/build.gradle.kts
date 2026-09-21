@@ -10,14 +10,14 @@ android {
         version = release(37)
     }
 
-    layout.buildDirectory.set(file("build_v17"))
+    layout.buildDirectory.set(file("build_v18"))
 
     defaultConfig {
         applicationId = "com.budgetmanager.debit.app"
         minSdk = 24
         targetSdk = 37
-        versionCode = 17
-        versionName = "1.0.5"
+        versionCode = 18
+        versionName = "1.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
