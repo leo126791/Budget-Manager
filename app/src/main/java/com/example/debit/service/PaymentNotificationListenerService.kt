@@ -49,6 +49,14 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         if (!gpayOn) return
 
+        // 0. Explicit Package & Email Exclusions (Gmail, Mail Clients, Email Notifications)
+        val isEmailApp = packageName == "com.google.android.gm" ||
+                packageName.contains("android.gm") ||
+                packageName.contains("email") ||
+                packageName.contains("mail") ||
+                packageName.contains("outlook") ||
+                packageName.contains("inbox")
+
         val extras = sbn.notification?.extras ?: return
 
         fun getStr(key: String): String {
@@ -67,6 +75,17 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val summaryText = getStr("android.summaryText")
 
         val combined = "$title $text $bigText $subText $titleBig $summaryText".trim()
+
+        val hasEmailKeywords = combined.contains("Gmail") ||
+                combined.contains("收件匣") ||
+                combined.contains("電子郵件") ||
+                combined.contains("寄件者") ||
+                combined.contains("@gmail.com")
+
+        if (isEmailApp || hasEmailKeywords) {
+            Log.d("PaymentService", "Excluded Gmail / Email notification ($packageName). Skipping.")
+            return
+        }
 
         Log.d("PaymentService", "Notification received from pkg: $packageName | text: '$combined'")
 
