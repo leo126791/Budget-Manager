@@ -249,6 +249,8 @@ fun DashboardScreen(
     var showMonthlyBreakdownDialog by remember { mutableStateOf(false) }
     var showAddSubscriptionDialog by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var deletingTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var deletingSubscription by remember { mutableStateOf<Subscription?>(null) }
     var movingDateTransaction by remember { mutableStateOf<Transaction?>(null) }
 
     var draggingTransaction by remember { mutableStateOf<Transaction?>(null) }
@@ -615,11 +617,22 @@ fun DashboardScreen(
                                                     draggedItemRect = null
                                                 },
                                                 onEdit = { editingTransaction = transaction },
-                                                onDelete = { viewModel.deleteTransaction(transaction) }
+                                                onDelete = {
+                                                    if (uiState.isConfirmDeleteEnabled) {
+                                                        deletingTransaction = transaction
+                                                    } else {
+                                                        viewModel.deleteTransaction(transaction)
+                                                    }
+                                                }
                                             )
                                         }
                                     }
                                 }
+                            }
+
+                            // Bottom spacer so FAB "記一筆" button doesn't block bottom items
+                            item {
+                                Spacer(modifier = Modifier.height(96.dp))
                             }
                         }
                     }
@@ -886,7 +899,13 @@ fun DashboardScreen(
                                                     }
 
                                                     IconButton(
-                                                        onClick = { viewModel.deleteSubscription(sub) },
+                                                        onClick = {
+                                                            if (uiState.isConfirmDeleteEnabled) {
+                                                                deletingSubscription = sub
+                                                            } else {
+                                                                viewModel.deleteSubscription(sub)
+                                                            }
+                                                        },
                                                         modifier = Modifier.size(36.dp)
                                                     ) {
                                                         Icon(
@@ -916,6 +935,7 @@ fun DashboardScreen(
                         currentGooglePayListenerEnabled = uiState.isGooglePayListenerEnabled,
                         currentDailyReminderEnabled = uiState.isDailyReminderEnabled,
                         reminderTimes = uiState.reminderTimes,
+                        currentConfirmDeleteEnabled = uiState.isConfirmDeleteEnabled,
                         currentIncomeTrackingEnabled = uiState.isIncomeTrackingEnabled,
                         currentSearchEnabled = uiState.isSearchEnabled,
                         currentSubscriptionEnabled = uiState.isSubscriptionEnabled,
@@ -936,6 +956,9 @@ fun DashboardScreen(
                         },
                         onToggleReminderTime = { reminder, enabled ->
                             viewModel.toggleReminderTime(reminder, enabled)
+                        },
+                        onConfirmDeleteChange = { enabled ->
+                            viewModel.setConfirmDeleteEnabled(enabled)
                         },
                         onSaveSettings = { budgetLimit, color, language, betaTesting, gPay, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup ->
                             viewModel.saveSettings(
@@ -1006,6 +1029,90 @@ fun DashboardScreen(
                     type = type
                 )
                 editingTransaction = null
+            }
+        )
+    }
+
+    if (deletingTransaction != null) {
+        val tx = deletingTransaction!!
+        val isIncome = tx.type == TransactionType.INCOME
+        val amountSign = if (isIncome) "+" else "-"
+        AlertDialog(
+            onDismissRequest = { deletingTransaction = null },
+            title = {
+                Text(
+                    text = if (isZh) "確定要刪除這筆紀錄嗎？" else "Delete Record?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (isZh)
+                        "刪除後將無法恢復：${tx.category} $amountSign$${tx.amount.toInt()}"
+                    else
+                        "This record will be permanently deleted: ${tx.category} $amountSign$${tx.amount.toInt()}"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTransaction(tx)
+                        deletingTransaction = null
+                    }
+                ) {
+                    Text(
+                        text = if (isZh) "確定刪除" else "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingTransaction = null }) {
+                    Text(AppStrings.get("cancel", lang))
+                }
+            }
+        )
+    }
+
+    if (deletingSubscription != null) {
+        val sub = deletingSubscription!!
+        val isIncome = sub.type == TransactionType.INCOME
+        val amountSign = if (isIncome) "+" else "-"
+        AlertDialog(
+            onDismissRequest = { deletingSubscription = null },
+            title = {
+                Text(
+                    text = if (isZh) "確定要刪除此固定收支嗎？" else "Delete Recurring Item?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (isZh)
+                        "刪除後將停止自動扣款/入帳：${sub.name} $amountSign$${sub.amount.toInt()}"
+                    else
+                        "This recurring item will be deleted: ${sub.name} $amountSign$${sub.amount.toInt()}"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSubscription(sub)
+                        deletingSubscription = null
+                    }
+                ) {
+                    Text(
+                        text = if (isZh) "確定刪除" else "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingSubscription = null }) {
+                    Text(AppStrings.get("cancel", lang))
+                }
             }
         )
     }

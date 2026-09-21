@@ -101,6 +101,7 @@ fun SettingsScreen(
     currentGooglePayListenerEnabled: Boolean = false,
     currentDailyReminderEnabled: Boolean = false,
     reminderTimes: List<ReminderTime> = emptyList(),
+    currentConfirmDeleteEnabled: Boolean = true,
     currentIncomeTrackingEnabled: Boolean = true,
     currentSearchEnabled: Boolean = true,
     currentSubscriptionEnabled: Boolean = true,
@@ -114,6 +115,7 @@ fun SettingsScreen(
     onAddReminderTime: (Int, Int) -> Unit = { _, _ -> },
     onDeleteReminderTime: (ReminderTime) -> Unit = {},
     onToggleReminderTime: (ReminderTime, Boolean) -> Unit = { _, _ -> },
+    onConfirmDeleteChange: (Boolean) -> Unit = {},
     onSaveSettings: (
         budgetLimit: Double,
         themeColor: AppThemeColor,
@@ -150,6 +152,7 @@ fun SettingsScreen(
     var betaTestingState by remember { mutableStateOf(currentBetaTestingEnabled) }
     var googlePayListenerState by remember { mutableStateOf(currentGooglePayListenerEnabled) }
     var dailyReminderState by remember { mutableStateOf(currentDailyReminderEnabled) }
+    var confirmDeleteState by remember { mutableStateOf(currentConfirmDeleteEnabled) }
     var incomeTrackingState by remember { mutableStateOf(currentIncomeTrackingEnabled) }
     var searchState by remember { mutableStateOf(currentSearchEnabled) }
     var subscriptionState by remember { mutableStateOf(currentSubscriptionEnabled) }
@@ -247,6 +250,11 @@ fun SettingsScreen(
                     Toast.makeText(context, promptMsg, Toast.LENGTH_LONG).show()
                     context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 }
+            },
+            confirmDeleteState = confirmDeleteState,
+            onConfirmDeleteChange = { newConfirm ->
+                confirmDeleteState = newConfirm
+                onConfirmDeleteChange(newConfirm)
             },
             dailyReminderState = dailyReminderState,
             reminderTimes = reminderTimes,
@@ -382,6 +390,8 @@ private fun SettingsBodyList(
     onBetaTestingChange: (Boolean) -> Unit,
     googlePayListenerState: Boolean,
     onGooglePayListenerChange: (Boolean) -> Unit,
+    confirmDeleteState: Boolean,
+    onConfirmDeleteChange: (Boolean) -> Unit,
     dailyReminderState: Boolean,
     reminderTimes: List<ReminderTime>,
     onDailyReminderMasterChange: (Boolean) -> Unit,
@@ -806,6 +816,33 @@ private fun SettingsBodyList(
                             }
                         }
                     }
+                }
+
+                HorizontalDivider()
+
+                // Confirm Before Delete Switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isZh) "刪除前確認" else "Confirm Before Delete",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isZh) "刪除記帳紀錄或訂閱項目前顯示確認提示" else "Show confirmation dialog before deleting records",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = confirmDeleteState,
+                        onCheckedChange = onConfirmDeleteChange
+                    )
                 }
             }
         }

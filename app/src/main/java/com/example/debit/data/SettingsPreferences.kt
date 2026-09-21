@@ -95,6 +95,9 @@ class SettingsPreferences(context: Context) {
     fun isGooglePayListenerEnabled(): Boolean = prefs.getBoolean("google_pay_listener", false)
     fun setGooglePayListenerEnabled(enabled: Boolean) = prefs.edit().putBoolean("google_pay_listener", enabled).apply()
 
+    fun isConfirmDeleteEnabled(): Boolean = prefs.getBoolean("confirm_delete", true)
+    fun setConfirmDeleteEnabled(enabled: Boolean) = prefs.edit().putBoolean("confirm_delete", enabled).apply()
+
     fun isDailyReminderEnabled(): Boolean = prefs.getBoolean("daily_reminder_enabled", false)
     fun setDailyReminderEnabled(enabled: Boolean) = prefs.edit().putBoolean("daily_reminder_enabled", enabled).apply()
 

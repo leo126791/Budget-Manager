@@ -64,7 +64,8 @@ private data class Tuple3(
 
 private data class Tuple4(
     val lastBackup: Long,
-    val init: Boolean
+    val init: Boolean,
+    val confirmDelete: Boolean
 )
 
 private data class PrefsTuple(
@@ -84,7 +85,8 @@ private data class PrefsTuple(
     val dragDateReorderEnabled: Boolean,
     val autoBackupOn: Boolean,
     val lastBackupTime: Long,
-    val initialized: Boolean
+    val initialized: Boolean,
+    val confirmDeleteOn: Boolean
 )
 
 data class DebitUiState(
@@ -118,7 +120,8 @@ data class DebitUiState(
     val isDragDateReorderEnabled: Boolean = true,
     val autoBackupEnabled: Boolean = true,
     val lastAutoBackupTime: Long = 0L,
-    val isInitialized: Boolean = true
+    val isInitialized: Boolean = true,
+    val isConfirmDeleteEnabled: Boolean = true
 ) {
     val remainingBudget: Double
         get() = totalBudgetLimit - totalExpense
@@ -182,6 +185,9 @@ class DebitViewModel(
 
     private val _isInitialized = MutableStateFlow(settingsPrefs.isInitialized())
     val isInitialized: StateFlow<Boolean> = _isInitialized
+
+    private val _confirmDeleteEnabled = MutableStateFlow(settingsPrefs.isConfirmDeleteEnabled())
+    val confirmDeleteEnabled: StateFlow<Boolean> = _confirmDeleteEnabled
 
     init {
         viewModelScope.launch {
@@ -251,8 +257,8 @@ class DebitViewModel(
         Tuple3(sub, multi, m3d, dragDate, autoBackup)
     }
 
-    private val flow4 = combine(_lastAutoBackupTime, _isInitialized) { lastBackup, init ->
-        Tuple4(lastBackup, init)
+    private val flow4 = combine(_lastAutoBackupTime, _isInitialized, _confirmDeleteEnabled) { lastBackup, init, confirmDelete ->
+        Tuple4(lastBackup, init, confirmDelete)
     }
 
     private val settingsTupleFlow = combine(flow1, flow2, flow3, flow4) { t1, t2, t3, t4 ->
@@ -273,7 +279,8 @@ class DebitViewModel(
             dragDateReorderEnabled = t3.dragDate,
             autoBackupOn = t3.autoBackup,
             lastBackupTime = t4.lastBackup,
-            initialized = t4.init
+            initialized = t4.init,
+            confirmDeleteOn = t4.confirmDelete
         )
     }
 
@@ -388,7 +395,8 @@ class DebitViewModel(
             isDragDateReorderEnabled = dragDateReorderEnabled,
             autoBackupEnabled = autoBackupOn,
             lastAutoBackupTime = lastBackupTime,
-            isInitialized = initialized
+            isInitialized = initialized,
+            isConfirmDeleteEnabled = prefsTuple.confirmDeleteOn
         )
     }.stateIn(
         scope = viewModelScope,
@@ -408,7 +416,8 @@ class DebitViewModel(
             isDragDateReorderEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isDragDateReorderEnabled(),
             autoBackupEnabled = settingsPrefs.isAutoBackupEnabled(),
             lastAutoBackupTime = settingsPrefs.getLastAutoBackupTime(),
-            isInitialized = settingsPrefs.isInitialized()
+            isInitialized = settingsPrefs.isInitialized(),
+            isConfirmDeleteEnabled = settingsPrefs.isConfirmDeleteEnabled()
         )
     )
 
@@ -610,6 +619,13 @@ class DebitViewModel(
     fun deleteSubscription(subscription: Subscription) {
         viewModelScope.launch {
             repository.deleteSubscription(subscription)
+        }
+    }
+
+    fun setConfirmDeleteEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setConfirmDeleteEnabled(enabled)
+            _confirmDeleteEnabled.value = enabled
         }
     }
 
