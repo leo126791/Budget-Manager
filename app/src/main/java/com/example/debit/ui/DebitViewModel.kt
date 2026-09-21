@@ -763,18 +763,35 @@ class DebitViewModel(
         budgetLimit: Double,
         color: AppThemeColor,
         language: AppLanguage,
-        betaTestingEnabled: Boolean = true
+        googlePayListenerEnabled: Boolean = false,
+        dailyReminderEnabled: Boolean = false,
+        reminderHour: Int = 21,
+        reminderMinute: Int = 0,
+        confirmDeleteEnabled: Boolean = true
     ) {
         viewModelScope.launch {
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
-            settingsPrefs.setBetaTestingEnabled(betaTestingEnabled)
+            settingsPrefs.setGooglePayListenerEnabled(googlePayListenerEnabled)
+            settingsPrefs.setDailyReminderEnabled(dailyReminderEnabled)
+            settingsPrefs.setReminderTime(reminderHour, reminderMinute)
+            settingsPrefs.setConfirmDeleteEnabled(confirmDeleteEnabled)
             settingsPrefs.setInitialized(true)
 
             _themeColor.value = color
             _appLanguage.value = language
-            _betaTestingEnabled.value = betaTestingEnabled
+            _googlePayListenerEnabled.value = googlePayListenerEnabled
+            _dailyReminderEnabled.value = dailyReminderEnabled
+            _reminderTimes.value = settingsPrefs.getReminderTimes()
+            _confirmDeleteEnabled.value = confirmDeleteEnabled
             _isInitialized.value = true
+
+            val context = getApplication<Application>()
+            if (dailyReminderEnabled) {
+                ReminderUtils.rescheduleAllReminders(context)
+            } else {
+                ReminderUtils.rescheduleAllReminders(context)
+            }
 
             repository.setBudget(
                 Budget(

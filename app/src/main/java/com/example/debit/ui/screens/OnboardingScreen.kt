@@ -1,5 +1,14 @@
 package com.example.debit.ui.screens
 
+import android.Manifest
+import android.app.TimePickerDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,16 +34,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -44,6 +61,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,13 +70,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
+import com.example.debit.data.ReminderTime
+import com.example.debit.data.SettingsPreferences
+import com.example.debit.receiver.DailyReminderReceiver
+import com.example.debit.service.PaymentNotificationListenerService
 import com.example.debit.ui.DebitViewModel
 import com.example.debit.ui.theme.DebitTheme
 import com.example.debit.ui.utils.AppStrings
@@ -68,11 +92,43 @@ import com.example.debit.ui.utils.AppStrings
 fun OnboardingScreen(
     viewModel: DebitViewModel
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
     var selectedLanguage by remember { mutableStateOf(uiState.appLanguage) }
     var selectedTheme by remember { mutableStateOf(uiState.themeColor) }
     var budgetInput by remember { mutableStateOf("15000") }
+
+    var dailyReminderState by remember { mutableStateOf(uiState.isDailyReminderEnabled) }
+    var reminderHourState by remember { mutableIntStateOf(21) }
+    var reminderMinuteState by remember { mutableIntStateOf(0) }
+
+    var googlePayListenerState by remember { mutableStateOf(uiState.isGooglePayListenerEnabled) }
+    var confirmDeleteState by remember { mutableStateOf(uiState.isConfirmDeleteEnabled) }
+
+    val isZh = selectedLanguage == AppLanguage.ZH
+
+    val postNotificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            DailyReminderReceiver.showReminderNotification(
+                context,
+                SettingsPreferences(context)
+            )
+            Toast.makeText(
+                context,
+                if (isZh) "已發送測試通知！" else "Test Notification Sent!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                context,
+                if (isZh) "請開啟通知權限以接收記帳提醒！" else "Notification permission required!",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     DebitTheme(themeColor = selectedTheme) {
         Surface(
@@ -360,9 +416,7 @@ fun OnboardingScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Step 4: Beta Features Option
-                var betaTestingState by remember { mutableStateOf(uiState.isBetaTestingEnabled) }
-
+                // Step 4: Daily Reminder Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -376,28 +430,212 @@ fun OnboardingScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (selectedLanguage == AppLanguage.ZH) "🧪 搶先體驗 Beta 實驗性功能" else "🧪 Enable Beta Features",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.weight(1f)
-                            )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = null,
+                                    tint = selectedTheme.primaryColor,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = if (isZh) "每日記帳提醒" else "Daily Expense Reminder",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                    Text(
+                                        text = if (isZh) "定時發送通知提醒您記錄開銷" else "Remind you to log expenses daily",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
                             Switch(
-                                checked = betaTestingState,
-                                onCheckedChange = { betaTestingState = it }
+                                checked = dailyReminderState,
+                                onCheckedChange = { enabled ->
+                                    dailyReminderState = enabled
+                                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                        postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        if (dailyReminderState) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider()
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                        Text(
-                            text = if (selectedLanguage == AppLanguage.ZH)
-                                "包含 3D 現代手繪 UI、收入記帳、關鍵字搜尋、訂閱管理、多帳戶與儲蓄目標箱（可隨時在設定中開啟或關閉）"
-                            else
-                                "Includes 3D Modern UI, Income Tracking, Search, Subscriptions, Multi Accounts & Savings Goals (Can be toggled in settings anytime)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isZh)
+                                        "提醒時間：%02d:%02d".format(reminderHourState, reminderMinuteState)
+                                    else
+                                        "Time: %02d:%02d".format(reminderHourState, reminderMinuteState),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                OutlinedButton(
+                                    onClick = {
+                                        TimePickerDialog(
+                                            context,
+                                            { _, hourOfDay, minute ->
+                                                reminderHourState = hourOfDay
+                                                reminderMinuteState = minute
+                                            },
+                                            reminderHourState,
+                                            reminderMinuteState,
+                                            true
+                                        ).show()
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(if (isZh) "變更時間" else "Change Time", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Step 5: Google Pay Auto-Tracking Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountBalanceWallet,
+                                    contentDescription = null,
+                                    tint = selectedTheme.primaryColor,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = if (isZh) "Google Pay 消費自動記帳" else "Google Pay Auto-Tracking",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                    Text(
+                                        text = if (isZh) "讀取 Google Pay 扣款通知並自動寫入記帳" else "Auto-capture Google Pay notifications",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = googlePayListenerState,
+                                onCheckedChange = { enabled ->
+                                    googlePayListenerState = enabled
+                                    if (enabled && !PaymentNotificationListenerService.isPermissionGranted(context)) {
+                                        val promptMsg = if (isZh) "請在系統設定中開啟「通知存取」權限，以自動捕捉 Google Pay 消費！" else "Please enable Notification Access permission!"
+                                        Toast.makeText(context, promptMsg, Toast.LENGTH_LONG).show()
+                                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                    }
+                                }
+                            )
+                        }
+
+                        if (googlePayListenerState) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider()
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            val isGranted = PaymentNotificationListenerService.isPermissionGranted(context)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                        context.startActivity(intent)
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (isGranted) selectedTheme.primaryColor else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = if (isGranted) {
+                                            if (isZh) "通知存取權限：已啟用 (運作中)" else "Notification Access: Granted"
+                                        } else {
+                                            if (isZh) "尚未開啟通知存取權限 (點此開啓權限)" else "Notification Access Required (Tap to Grant)"
+                                        },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Step 6: Confirm Before Delete Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isZh) "刪除前確認" else "Confirm Before Delete",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = if (isZh) "刪除記帳紀錄或訂閱項目前顯示確認提示" else "Show confirmation dialog before deleting records",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = confirmDeleteState,
+                                onCheckedChange = { confirmDeleteState = it }
+                            )
+                        }
                     }
                 }
 
@@ -412,7 +650,11 @@ fun OnboardingScreen(
                             budgetLimit = parsedBudget,
                             color = selectedTheme,
                             language = selectedLanguage,
-                            betaTestingEnabled = betaTestingState
+                            googlePayListenerEnabled = googlePayListenerState,
+                            dailyReminderEnabled = dailyReminderState,
+                            reminderHour = reminderHourState,
+                            reminderMinute = reminderMinuteState,
+                            confirmDeleteEnabled = confirmDeleteState
                         )
                     },
                     modifier = Modifier
