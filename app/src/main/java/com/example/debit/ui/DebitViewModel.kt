@@ -253,6 +253,14 @@ class DebitViewModel(
                         }
                         BudgetWidgetProvider.updateAllWidgets(getApplication())
                         triggerAutoBackup()
+
+                        ReminderUtils.showRecurringItemNotification(
+                            getApplication(),
+                            sub.name,
+                            sub.amount,
+                            isIncome,
+                            settingsPrefs.getLanguage()
+                        )
                     }
                 }
             }
