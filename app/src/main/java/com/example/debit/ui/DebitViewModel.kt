@@ -205,22 +205,33 @@ class DebitViewModel(
         val currentYear = calNow.get(Calendar.YEAR)
         val currentMonth = calNow.get(Calendar.MONTH) + 1
         val currentDay = calNow.get(Calendar.DAY_OF_MONTH)
+        val currentHour = calNow.get(Calendar.HOUR_OF_DAY)
+        val nowMs = System.currentTimeMillis()
 
         viewModelScope.launch {
             subscriptions.forEach { sub ->
-                val isDueToday = if (sub.isAnnual) {
-                    sub.billingMonth == currentMonth && sub.billingDay == currentDay
+                val isTimeDue = currentHour >= sub.billingHour
+
+                val isDueToday = if (sub.isCustomInterval) {
+                    val intervalMs = sub.intervalDays.coerceAtLeast(1) * 86_400_000L
+                    (sub.lastProcessedDate == 0L || (nowMs - sub.lastProcessedDate >= intervalMs)) && isTimeDue
+                } else if (sub.isAnnual) {
+                    sub.billingMonth == currentMonth && sub.billingDay == currentDay && isTimeDue
                 } else {
-                    sub.billingDay == currentDay
+                    sub.billingDay == currentDay && isTimeDue
                 }
 
                 if (isDueToday) {
-                    val alreadyBilled = transactions.any { tx ->
-                        val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
-                        val isSameDay = calTx.get(Calendar.YEAR) == currentYear &&
-                                calTx.get(Calendar.MONTH) + 1 == currentMonth &&
-                                calTx.get(Calendar.DAY_OF_MONTH) == currentDay
-                        isSameDay && (tx.note.contains(sub.name) || tx.note.contains("固定扣款"))
+                    val alreadyBilled = if (sub.isCustomInterval) {
+                        sub.lastProcessedDate > 0L && (nowMs - sub.lastProcessedDate < 86_400_000L)
+                    } else {
+                        transactions.any { tx ->
+                            val calTx = Calendar.getInstance().apply { timeInMillis = tx.date }
+                            val isSameDay = calTx.get(Calendar.YEAR) == currentYear &&
+                                    calTx.get(Calendar.MONTH) + 1 == currentMonth &&
+                                    calTx.get(Calendar.DAY_OF_MONTH) == currentDay
+                            isSameDay && (tx.note.contains(sub.name) || tx.note.contains("固定扣款") || tx.note.contains("固定收入"))
+                        }
                     }
 
                     if (!alreadyBilled) {
@@ -233,10 +244,13 @@ class DebitViewModel(
                                 amount = sub.amount,
                                 category = categoryText,
                                 note = noteText,
-                                date = System.currentTimeMillis(),
+                                date = nowMs,
                                 type = sub.type
                             )
                         )
+                        if (sub.isCustomInterval) {
+                            repository.addSubscription(sub.copy(lastProcessedDate = nowMs))
+                        }
                         BudgetWidgetProvider.updateAllWidgets(getApplication())
                         triggerAutoBackup()
                     }
@@ -356,8 +370,17 @@ class DebitViewModel(
         }
 
         val totalBgt = globalBudget?.amountLimit ?: 0.0
-        val monthlyFixedIncome = subscriptions.filter { it.type == TransactionType.INCOME }.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
-        val monthlyFixedExpense = subscriptions.filter { it.type == TransactionType.EXPENSE }.sumOf { if (it.isAnnual) it.amount / 12.0 else it.amount }
+
+        fun calcMonthlyAvg(sub: Subscription): Double {
+            return when {
+                sub.isCustomInterval -> sub.amount * (30.0 / sub.intervalDays.coerceAtLeast(1))
+                sub.isAnnual -> sub.amount / 12.0
+                else -> sub.amount
+            }
+        }
+
+        val monthlyFixedIncome = subscriptions.filter { it.type == TransactionType.INCOME }.sumOf { calcMonthlyAvg(it) }
+        val monthlyFixedExpense = subscriptions.filter { it.type == TransactionType.EXPENSE }.sumOf { calcMonthlyAvg(it) }
 
         val monthsInDb = transactions.map {
             DateFormatUtils.formatYM(Date(it.date))
@@ -599,7 +622,11 @@ class DebitViewModel(
         billingMonth: Int = 1,
         isAnnual: Boolean = false,
         type: TransactionType = TransactionType.EXPENSE,
-        category: String = "日常"
+        category: String = "日常",
+        isCustomInterval: Boolean = false,
+        intervalDays: Int = 30,
+        billingHour: Int = 9,
+        billingMinute: Int = 0
     ) {
         viewModelScope.launch {
             repository.addSubscription(
@@ -610,7 +637,11 @@ class DebitViewModel(
                     billingMonth = billingMonth,
                     isAnnual = isAnnual,
                     type = type,
-                    category = category
+                    category = category,
+                    isCustomInterval = isCustomInterval,
+                    intervalDays = intervalDays,
+                    billingHour = billingHour,
+                    billingMinute = billingMinute
                 )
             )
         }

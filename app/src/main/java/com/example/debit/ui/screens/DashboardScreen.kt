@@ -1,5 +1,6 @@
 package com.example.debit.ui.screens
 
+import android.app.TimePickerDialog
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -818,27 +819,43 @@ fun DashboardScreen(
                                     } else {
                                         uiState.subscriptions.forEach { sub ->
                                             val isIncome = sub.type == TransactionType.INCOME
+                                            val timeFormatted = "%02d:%02d".format(sub.billingHour, sub.billingMinute)
+
                                             val typeTag = if (isIncome) {
-                                                if (lang == AppLanguage.ZH) "固定收入" else "Recurring Income"
+                                                if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "收入 (每 ${sub.intervalDays} 天)" else "Income (Every ${sub.intervalDays} Days)")
+                                                else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "收入 (年發)" else "Annual Income")
+                                                else (if (lang == AppLanguage.ZH) "固定收入" else "Recurring Income")
                                             } else {
-                                                if (sub.isAnnual) (if (lang == AppLanguage.ZH) "固定支出 (年繳)" else "Annual Expense") else (if (lang == AppLanguage.ZH) "固定支出" else "Recurring Expense")
+                                                if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "支出 (每 ${sub.intervalDays} 天)" else "Expense (Every ${sub.intervalDays} Days)")
+                                                else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "支出 (年繳)" else "Annual Expense")
+                                                else (if (lang == AppLanguage.ZH) "固定支出" else "Recurring Expense")
                                             }
 
-                                            val dateDetailStr = if (sub.isAnnual) {
+                                            val dateDetailStr = if (sub.isCustomInterval) {
                                                 if (isIncome) {
-                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日入帳" else "Annual income on ${sub.billingMonth}/${sub.billingDay}"
+                                                    if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 入帳" else "Every ${sub.intervalDays} days at $timeFormatted"
                                                 } else {
-                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日扣款" else "Annual billing on ${sub.billingMonth}/${sub.billingDay}"
+                                                    if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 扣款" else "Every ${sub.intervalDays} days at $timeFormatted"
+                                                }
+                                            } else if (sub.isAnnual) {
+                                                if (isIncome) {
+                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Annual income on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
+                                                } else {
+                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Annual billing on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
                                                 }
                                             } else {
                                                 if (isIncome) {
-                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日入帳" else "Monthly income on day ${sub.billingDay}"
+                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Monthly income on day ${sub.billingDay} at $timeFormatted"
                                                 } else {
-                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日扣款" else "Monthly billing on day ${sub.billingDay}"
+                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Monthly billing on day ${sub.billingDay} at $timeFormatted"
                                                 }
                                             }
 
-                                            val amountText = if (sub.isAnnual) {
+                                            val amountText = if (sub.isCustomInterval) {
+                                                val monthlyAvg = sub.amount * (30.0 / sub.intervalDays.coerceAtLeast(1))
+                                                val prefix = if (isIncome) "+" else "-"
+                                                "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/次 (約 $prefix$${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
+                                            } else if (sub.isAnnual) {
                                                 val monthlyAvg = sub.amount / 12.0
                                                 val prefix = if (isIncome) "+" else "-"
                                                 "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年 (約 $prefix$${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
@@ -1141,7 +1158,7 @@ fun DashboardScreen(
         AddSubscriptionDialog(
             language = lang,
             onDismissRequest = { showAddSubscriptionDialog = false },
-            onSaveSubscription = { name, amount, billingDay, billingMonth, isAnnual, type, category ->
+            onSaveSubscription = { name, amount, billingDay, billingMonth, isAnnual, type, category, isCustomInterval, intervalDays, billingHour, billingMinute ->
                 viewModel.addSubscription(
                     name = name,
                     amount = amount,
@@ -1149,7 +1166,11 @@ fun DashboardScreen(
                     billingMonth = billingMonth,
                     isAnnual = isAnnual,
                     type = type,
-                    category = category
+                    category = category,
+                    isCustomInterval = isCustomInterval,
+                    intervalDays = intervalDays,
+                    billingHour = billingHour,
+                    billingMinute = billingMinute
                 )
             }
         )
@@ -1634,13 +1655,29 @@ fun EmptyTransactionsCard(language: AppLanguage, onAddClick: () -> Unit) {
 fun AddSubscriptionDialog(
     language: AppLanguage,
     onDismissRequest: () -> Unit,
-    onSaveSubscription: (name: String, amount: Double, billingDay: Int, billingMonth: Int, isAnnual: Boolean, type: TransactionType, category: String) -> Unit
+    onSaveSubscription: (
+        name: String,
+        amount: Double,
+        billingDay: Int,
+        billingMonth: Int,
+        isAnnual: Boolean,
+        type: TransactionType,
+        category: String,
+        isCustomInterval: Boolean,
+        intervalDays: Int,
+        billingHour: Int,
+        billingMinute: Int
+    ) -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var billingMonthText by remember { mutableStateOf("1") }
     var billingDayText by remember { mutableStateOf("1") }
-    var isAnnual by remember { mutableStateOf(false) }
+    var intervalDaysText by remember { mutableStateOf("14") }
+    var frequencyMode by remember { mutableIntStateOf(0) } // 0: 按月, 1: 按年, 2: 自訂天數
+    var billingHourState by remember { mutableIntStateOf(9) }
+    var billingMinuteState by remember { mutableIntStateOf(0) }
     var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
     var isError by remember { mutableStateOf(false) }
 
@@ -1657,6 +1694,7 @@ fun AddSubscriptionDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Income vs Expense
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         selected = transactionType == TransactionType.EXPENSE,
@@ -1674,20 +1712,28 @@ fun AddSubscriptionDialog(
                     }
                 }
 
+                // Frequency Mode: Monthly vs Annual vs Custom Interval
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
-                        selected = !isAnnual,
-                        onClick = { isAnnual = false },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        selected = frequencyMode == 0,
+                        onClick = { frequencyMode = 0 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
                     ) {
-                        Text(if (isZh) "按月發放/扣款" else "Monthly")
+                        Text(if (isZh) "按月" else "Monthly", fontSize = 12.sp)
                     }
                     SegmentedButton(
-                        selected = isAnnual,
-                        onClick = { isAnnual = true },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        selected = frequencyMode == 1,
+                        onClick = { frequencyMode = 1 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
                     ) {
-                        Text(if (isZh) "按年發放/扣款" else "Annual")
+                        Text(if (isZh) "按年" else "Annual", fontSize = 12.sp)
+                    }
+                    SegmentedButton(
+                        selected = frequencyMode == 2,
+                        onClick = { frequencyMode = 2 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                    ) {
+                        Text(if (isZh) "自訂天數" else "Custom", fontSize = 12.sp)
                     }
                 }
 
@@ -1722,16 +1768,48 @@ fun AddSubscriptionDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (isAnnual) {
+                if (frequencyMode == 2) {
+                    OutlinedTextField(
+                        value = intervalDaysText,
+                        onValueChange = { intervalDaysText = it },
+                        label = {
+                            Text(
+                                if (isZh) {
+                                    if (transactionType == TransactionType.INCOME) "每幾天發放一次 (例如 14, 30)" else "每幾天扣款一次 (例如 14, 30)"
+                                } else "Interval Days (e.g. 14, 30)"
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (frequencyMode == 1) {
+                            OutlinedTextField(
+                                value = billingMonthText,
+                                onValueChange = { billingMonthText = it },
+                                label = {
+                                    Text(
+                                        if (isZh) {
+                                            if (transactionType == TransactionType.INCOME) "入帳月份 (1-12)" else "扣款月份 (1-12)"
+                                        } else "Month (1-12)"
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
                         OutlinedTextField(
-                            value = billingMonthText,
-                            onValueChange = { billingMonthText = it },
+                            value = billingDayText,
+                            onValueChange = { billingDayText = it },
                             label = {
                                 Text(
                                     if (isZh) {
-                                        if (transactionType == TransactionType.INCOME) "入帳月份 (1-12)" else "扣款月份 (1-12)"
-                                    } else "Month (1-12)"
+                                        if (transactionType == TransactionType.INCOME) "入帳日期 (1-31)" else "扣款日期 (1-31)"
+                                    } else "Day (1-31)"
                                 )
                             },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -1739,21 +1817,44 @@ fun AddSubscriptionDialog(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                }
 
-                    OutlinedTextField(
-                        value = billingDayText,
-                        onValueChange = { billingDayText = it },
-                        label = {
-                            Text(
-                                if (isZh) {
-                                    if (transactionType == TransactionType.INCOME) "入帳日期 (1-31)" else "扣款日期 (1-31)"
-                                } else "Day (1-31)"
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
+                // Time Picker Section
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isZh)
+                            (if (transactionType == TransactionType.INCOME) "入帳時間：%02d:%02d".format(billingHourState, billingMinuteState) else "扣款時間：%02d:%02d".format(billingHourState, billingMinuteState))
+                        else
+                            "Time: %02d:%02d".format(billingHourState, billingMinuteState),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
                     )
+
+                    OutlinedButton(
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, hourOfDay, minute ->
+                                    billingHourState = hourOfDay
+                                    billingMinuteState = minute
+                                },
+                                billingHourState,
+                                billingMinuteState,
+                                true
+                            ).show()
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (isZh) "變更時間" else "Change Time", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
         },
@@ -1763,10 +1864,16 @@ fun AddSubscriptionDialog(
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     val day = billingDayText.toIntOrNull()?.coerceIn(1, 31) ?: 1
                     val month = billingMonthText.toIntOrNull()?.coerceIn(1, 12) ?: 1
+                    val intervalDays = intervalDaysText.toIntOrNull()?.coerceIn(1, 365) ?: 30
+                    val isAnnual = frequencyMode == 1
+                    val isCustom = frequencyMode == 2
                     val defaultCat = if (transactionType == TransactionType.INCOME) "薪水" else "日常"
 
                     if (name.isNotBlank() && amount > 0) {
-                        onSaveSubscription(name, amount, day, month, isAnnual, transactionType, defaultCat)
+                        onSaveSubscription(
+                            name, amount, day, month, isAnnual, transactionType, defaultCat,
+                            isCustom, intervalDays, billingHourState, billingMinuteState
+                        )
                         onDismissRequest()
                     } else {
                         isError = true

@@ -17,5 +17,15 @@ data class Subscription(
     @ColumnInfo(defaultValue = "0")
     val isAnnual: Boolean = false,
     @ColumnInfo(defaultValue = "EXPENSE")
-    val type: TransactionType = TransactionType.EXPENSE
+    val type: TransactionType = TransactionType.EXPENSE,
+    @ColumnInfo(defaultValue = "0")
+    val isCustomInterval: Boolean = false,
+    @ColumnInfo(defaultValue = "30")
+    val intervalDays: Int = 30,
+    @ColumnInfo(defaultValue = "9")
+    val billingHour: Int = 9,
+    @ColumnInfo(defaultValue = "0")
+    val billingMinute: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val lastProcessedDate: Long = 0L
 )
