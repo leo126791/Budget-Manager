@@ -29,6 +29,10 @@ class DebitRepository(
         transactionDao.deleteTransaction(transaction)
     }
 
+    suspend fun deleteAllTransactions() {
+        transactionDao.deleteAllTransactions()
+    }
+
     suspend fun setBudget(budget: Budget) {
         budgetDao.insertOrUpdateBudget(budget)
     }

@@ -475,14 +475,36 @@ class DebitViewModel(
         }
     }
 
-    fun restoreBackupJson(jsonContent: String, onResult: (txCount: Int) -> Unit) {
+    fun restoreBackupJson(jsonContent: String, overwrite: Boolean = false, onResult: (txCount: Int) -> Unit) {
         viewModelScope.launch {
             try {
                 val (txList, bgtList) = BackupUtils.parseBackupJson(jsonContent)
-                txList.forEach { repository.addTransaction(it) }
-                bgtList.forEach { repository.setBudget(it) }
+                val currentTxs = repository.allTransactions.first()
+                val localKeys = currentTxs.map { "${it.date}_${it.amount}_${it.category}_${it.note}" }.toSet()
+
+                var count = 0
+                if (overwrite) {
+                    repository.deleteAllTransactions()
+                    txList.forEach { tx ->
+                        repository.addTransaction(tx)
+                        count++
+                    }
+                } else {
+                    txList.forEach { tx ->
+                        val key = "${tx.date}_${tx.amount}_${tx.category}_${tx.note}"
+                        if (!localKeys.contains(key)) {
+                            repository.addTransaction(tx)
+                            count++
+                        }
+                    }
+                }
+
+                bgtList.forEach { bgt ->
+                    repository.setBudget(bgt)
+                }
+
                 BudgetWidgetProvider.updateAllWidgets(getApplication())
-                onResult(txList.size)
+                onResult(count)
             } catch (_: Exception) {
                 onResult(-1)
             }

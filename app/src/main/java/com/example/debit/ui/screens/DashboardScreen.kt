@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -70,6 +71,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -129,6 +131,7 @@ import com.example.debit.ui.dialogs.BudgetSettingsDialog
 import com.example.debit.ui.dialogs.MonthSelectorDialog
 import com.example.debit.ui.dialogs.MonthlyBreakdownDialog
 import com.example.debit.ui.utils.AppStrings
+import com.example.debit.ui.utils.BackupCompareInfo
 import com.example.debit.ui.utils.BackupUtils
 import com.example.debit.ui.utils.ExportUtils
 import com.example.debit.ui.utils.OrganicShapeChip
@@ -260,6 +263,8 @@ fun DashboardScreen(
     var draggedItemRect by remember { mutableStateOf<Rect?>(null) }
     val dateHeaderBoundsMap = remember { mutableStateMapOf<String, Rect>() }
 
+    var pendingBackupInfo by remember { mutableStateOf<BackupCompareInfo?>(null) }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -267,13 +272,11 @@ fun DashboardScreen(
             try {
                 context.contentResolver.openInputStream(it)?.use { stream ->
                     val jsonContent = stream.bufferedReader().readText()
-                    viewModel.restoreBackupJson(jsonContent) { count ->
-                        val msg = if (count >= 0) "🎉 成功還原 $count 筆記帳紀錄與預算數據！" else "❌ 備份檔格式不正確"
-                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                    }
+                    val compareInfo = BackupUtils.parseCompareInfo(jsonContent, uiState.transactions)
+                    pendingBackupInfo = compareInfo
                 }
             } catch (_: Exception) {
-                Toast.makeText(context, "❌ 無法讀取選取的備份檔案", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, if (isZh) "無法讀取選取的備份檔案" else "Failed to read backup file", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -1172,6 +1175,135 @@ fun DashboardScreen(
                     billingHour = billingHour,
                     billingMinute = billingMinute
                 )
+            }
+        )
+    }
+
+    if (pendingBackupInfo != null) {
+        val info = pendingBackupInfo!!
+        val dateStr = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(info.exportDate))
+
+        AlertDialog(
+            onDismissRequest = { pendingBackupInfo = null },
+            title = {
+                Text(
+                    text = if (isZh) "雲端備份與本地資料比對" else "Backup Comparison",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = if (isZh) "備份建立時間：$dateStr" else "Backup Date: $dateStr",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(if (isZh) "項目" else "Item", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                                Text(if (isZh) "雲端備份" else "Cloud", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(if (isZh) "本地資料" else "Local", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                            }
+
+                            HorizontalDivider()
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(if (isZh) "總紀錄筆數" else "Total Records", style = MaterialTheme.typography.bodyMedium)
+                                Text("${info.cloudTxCount} 筆", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                                Text("${info.localTxCount} 筆", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(if (isZh) "總支出金額" else "Total Expense", style = MaterialTheme.typography.bodyMedium)
+                                Text("$${String.format(Locale.getDefault(), "%,.0f", info.cloudTotalExpense)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                                Text("$${String.format(Locale.getDefault(), "%,.0f", info.localTotalExpense)}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(if (isZh) "總收入金額" else "Total Income", style = MaterialTheme.typography.bodyMedium)
+                                Text("$${String.format(Locale.getDefault(), "%,.0f", info.cloudTotalIncome)}", fontWeight = FontWeight.Bold, color = Color(0xFF059669), style = MaterialTheme.typography.bodyMedium)
+                                Text("$${String.format(Locale.getDefault(), "%,.0f", info.localTotalIncome)}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+
+                    if (info.uniqueCloudCount > 0) {
+                        Text(
+                            text = if (isZh)
+                                "比對結果：雲端包含 ${info.uniqueCloudCount} 筆本地尚未記錄的新資料。"
+                            else
+                                "Cloud backup contains ${info.uniqueCloudCount} new records not in local data.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Text(
+                            text = if (isZh)
+                                "比對結果：本地資料與雲端備份紀錄一致。"
+                            else
+                                "Local data matches cloud backup.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            viewModel.restoreBackupJson(info.jsonContent, overwrite = false) { count ->
+                                val msg = if (isZh) "已成功合併 $count 筆雲端紀錄！" else "Successfully merged $count records!"
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                            pendingBackupInfo = null
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (isZh) "合併雲端資料" else "Merge Cloud", fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.restoreBackupJson(info.jsonContent, overwrite = true) { count ->
+                                val msg = if (isZh) "已成功覆蓋還原 $count 筆紀錄！" else "Successfully restored $count records!"
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                            pendingBackupInfo = null
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(if (isZh) "覆蓋本地資料" else "Overwrite Local", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingBackupInfo = null }) {
+                    Text(AppStrings.get("cancel", lang))
+                }
             }
         )
     }

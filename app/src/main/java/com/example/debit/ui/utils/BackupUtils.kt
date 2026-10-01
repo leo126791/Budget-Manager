@@ -14,6 +14,20 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+data class BackupCompareInfo(
+    val exportDate: Long,
+    val jsonContent: String,
+    val cloudTxCount: Int,
+    val cloudTotalExpense: Double,
+    val cloudTotalIncome: Double,
+    val localTxCount: Int,
+    val localTotalExpense: Double,
+    val localTotalIncome: Double,
+    val uniqueCloudCount: Int,
+    val parsedTransactions: List<Transaction>,
+    val parsedBudgets: List<Budget>
+)
+
 object BackupUtils {
 
     fun createBackupJson(transactions: List<Transaction>, budgets: List<Budget>): String {
@@ -99,6 +113,41 @@ object BackupUtils {
         }
 
         return Pair(txList, bgtList)
+    }
+
+    fun parseCompareInfo(
+        jsonString: String,
+        localTransactions: List<Transaction>
+    ): BackupCompareInfo {
+        val root = JSONObject(jsonString)
+        val exportDate = root.optLong("exportDate", System.currentTimeMillis())
+        val (parsedTxList, parsedBgtList) = parseBackupJson(jsonString)
+
+        val cloudExpense = parsedTxList.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+        val cloudIncome = parsedTxList.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+
+        val localExpense = localTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+        val localIncome = localTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+
+        val localKeys = localTransactions.map { "${it.date}_${it.amount}_${it.category}_${it.note}" }.toSet()
+        val uniqueCloudCount = parsedTxList.count { tx ->
+            val key = "${tx.date}_${tx.amount}_${tx.category}_${tx.note}"
+            !localKeys.contains(key)
+        }
+
+        return BackupCompareInfo(
+            exportDate = exportDate,
+            jsonContent = jsonString,
+            cloudTxCount = parsedTxList.size,
+            cloudTotalExpense = cloudExpense,
+            cloudTotalIncome = cloudIncome,
+            localTxCount = localTransactions.size,
+            localTotalExpense = localExpense,
+            localTotalIncome = localIncome,
+            uniqueCloudCount = uniqueCloudCount,
+            parsedTransactions = parsedTxList,
+            parsedBudgets = parsedBgtList
+        )
     }
 
     fun performAutoBackup(
