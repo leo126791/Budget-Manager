@@ -173,10 +173,10 @@ fun SettingsScreen(
     }
     var selectedColor by remember { mutableStateOf(currentThemeColor) }
     var selectedLanguage by remember { mutableStateOf(currentLanguage) }
-    var betaTestingState by remember { mutableStateOf(currentBetaTestingEnabled) }
-    var googlePayListenerState by remember { mutableStateOf(currentGooglePayListenerEnabled) }
-    var dailyReminderState by remember { mutableStateOf(currentDailyReminderEnabled) }
-    var confirmDeleteState by remember { mutableStateOf(currentConfirmDeleteEnabled) }
+    var betaTestingState by remember(currentBetaTestingEnabled) { mutableStateOf(currentBetaTestingEnabled) }
+    var googlePayListenerState by remember(currentGooglePayListenerEnabled) { mutableStateOf(currentGooglePayListenerEnabled) }
+    var dailyReminderState by remember(currentDailyReminderEnabled) { mutableStateOf(currentDailyReminderEnabled) }
+    var confirmDeleteState by remember(currentConfirmDeleteEnabled) { mutableStateOf(currentConfirmDeleteEnabled) }
     var incomeTrackingState by remember { mutableStateOf(currentIncomeTrackingEnabled) }
     var searchState by remember { mutableStateOf(currentSearchEnabled) }
     var subscriptionState by remember { mutableStateOf(currentSubscriptionEnabled) }

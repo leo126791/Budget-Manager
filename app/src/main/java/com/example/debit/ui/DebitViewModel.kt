@@ -648,7 +648,6 @@ class DebitViewModel(
         isDarkMode: Boolean = _isDarkMode.value
     ) {
         viewModelScope.launch {
-            val effGooglePay = betaTestingEnabled && googlePayListenerEnabled
             val effIncome = betaTestingEnabled && incomeTrackingEnabled
             val effSearch = betaTestingEnabled && searchEnabled
             val effSub = betaTestingEnabled && subscriptionEnabled
@@ -659,7 +658,7 @@ class DebitViewModel(
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
             settingsPrefs.setBetaTestingEnabled(betaTestingEnabled)
-            settingsPrefs.setGooglePayListenerEnabled(effGooglePay)
+            settingsPrefs.setGooglePayListenerEnabled(googlePayListenerEnabled)
             settingsPrefs.setIncomeTrackingEnabled(effIncome)
             settingsPrefs.setSearchEnabled(effSearch)
             settingsPrefs.setSubscriptionEnabled(effSub)
@@ -672,7 +671,7 @@ class DebitViewModel(
             _themeColor.value = color
             _appLanguage.value = language
             _betaTestingEnabled.value = betaTestingEnabled
-            _googlePayListenerEnabled.value = effGooglePay
+            _googlePayListenerEnabled.value = googlePayListenerEnabled
             _incomeTrackingEnabled.value = effIncome
             _searchEnabled.value = effSearch
             _subscriptionEnabled.value = effSub
