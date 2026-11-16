@@ -10,6 +10,7 @@ class DebitRepository(
 ) {
     val allTransactions: Flow<List<Transaction>> = transactionDao.getAllTransactions()
     val globalBudget: Flow<Budget?> = budgetDao.getGlobalTotalBudget()
+    val allBudgets: Flow<List<Budget>> = budgetDao.getAllBudgets()
     val allSubscriptions: Flow<List<Subscription>> = subscriptionDao.getAllSubscriptions()
     val allSavingsGoals: Flow<List<SavingsGoal>> = savingsGoalDao.getAllSavingsGoals()
 
@@ -37,12 +38,20 @@ class DebitRepository(
         budgetDao.insertOrUpdateBudget(budget)
     }
 
+    suspend fun deleteAllBudgets() {
+        budgetDao.deleteAllBudgets()
+    }
+
     suspend fun addSubscription(subscription: Subscription) {
         subscriptionDao.insertSubscription(subscription)
     }
 
     suspend fun deleteSubscription(subscription: Subscription) {
         subscriptionDao.deleteSubscription(subscription)
+    }
+
+    suspend fun deleteAllSubscriptions() {
+        subscriptionDao.deleteAllSubscriptions()
     }
 
     suspend fun addSavingsGoal(savingsGoal: SavingsGoal) {
@@ -55,5 +64,9 @@ class DebitRepository(
 
     suspend fun deleteSavingsGoal(savingsGoal: SavingsGoal) {
         savingsGoalDao.deleteSavingsGoal(savingsGoal)
+    }
+
+    suspend fun deleteAllSavingsGoals() {
+        savingsGoalDao.deleteAllSavingsGoals()
     }
 }

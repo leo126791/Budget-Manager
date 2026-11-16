@@ -15,9 +15,15 @@ interface BudgetDao {
     @Query("SELECT * FROM budgets WHERE category = 'TOTAL' ORDER BY id DESC LIMIT 1")
     fun getGlobalTotalBudget(): Flow<Budget?>
 
+    @Query("SELECT * FROM budgets")
+    fun getAllBudgets(): Flow<List<Budget>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateBudget(budget: Budget)
 
     @Delete
     suspend fun deleteBudget(budget: Budget)
+
+    @Query("DELETE FROM budgets")
+    suspend fun deleteAllBudgets()
 }

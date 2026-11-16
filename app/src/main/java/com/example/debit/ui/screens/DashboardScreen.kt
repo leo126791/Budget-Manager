@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.Color
@@ -111,6 +112,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.debit.R
@@ -272,7 +274,7 @@ fun DashboardScreen(
             try {
                 context.contentResolver.openInputStream(it)?.use { stream ->
                     val jsonContent = stream.bufferedReader().readText()
-                    val compareInfo = BackupUtils.parseCompareInfo(jsonContent, uiState.transactions)
+                    val compareInfo = BackupUtils.parseCompareInfo(jsonContent, uiState.allTransactions.ifEmpty { uiState.transactions })
                     pendingBackupInfo = compareInfo
                 }
             } catch (_: Exception) {
@@ -292,66 +294,111 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.bouncyClickable { showMonthSelectorDialog = true },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(44.dp)
+            if (selectedBottomNavIndex == 3) {
+                TopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_piggy_bank),
-                                    contentDescription = "App Logo",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(36.dp)
-                                )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFEF3C7),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_piggy_bank),
+                                        contentDescription = "Piggy",
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
-                        }
-                        Column {
-                            Text(
-                                text = "Budget Manager",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column {
                                 Text(
-                                    text = headerMonthDisplay,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    text = if (isZh) "設定 (Settings)" else "Settings",
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "切換月份",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
                             }
                         }
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { selectedBottomNavIndex = 3 },
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = AppStrings.get("settings", lang),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    },
+                    actions = {
+                        IconButton(onClick = { /* Help / Tips */ }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                                contentDescription = if (isZh) "說明" else "Help",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+            } else {
+                TopAppBar(
+                    title = {
+                        Row(
+                            modifier = Modifier.bouncyClickable { showMonthSelectorDialog = true },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_piggy_bank),
+                                        contentDescription = "App Logo",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "Budget Manager",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = headerMonthDisplay,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "切換月份",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = { selectedBottomNavIndex = 3 },
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = AppStrings.get("settings", lang),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
         },
         bottomBar = {
             NavigationBar(
@@ -385,16 +432,26 @@ fun DashboardScreen(
             }
         },
         floatingActionButton = {
-            if (selectedBottomNavIndex == 0 || selectedBottomNavIndex == 2) {
-                ExtendedFloatingActionButton(
-                    onClick = { showAddDialog = true },
-                    icon = { Icon(Icons.Default.Add, contentDescription = AppStrings.get("add_record", lang)) },
-                    text = { Text(AppStrings.get("add_record", lang), fontWeight = FontWeight.Bold) },
-                    shape = OrganicShapeChip,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = if (isZh) "記一筆" else "Add Record",
+                        tint = Color.White
+                    )
+                },
+                text = {
+                    Text(
+                        text = if (isZh) "記一筆" else "Add",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = Color(0xFF1B4A31),
+                contentColor = Color.White
+            )
         }
     ) { innerPadding ->
         AnimatedContent(
@@ -950,6 +1007,7 @@ fun DashboardScreen(
                     SettingsScreen(
                         initialTotalBudget = uiState.totalBudgetLimit,
                         currentThemeColor = uiState.themeColor,
+                        currentDarkMode = uiState.isDarkMode,
                         currentLanguage = uiState.appLanguage,
                         currentBetaTestingEnabled = uiState.isBetaTestingEnabled,
                         currentGooglePayListenerEnabled = uiState.isGooglePayListenerEnabled,
@@ -980,6 +1038,9 @@ fun DashboardScreen(
                         onConfirmDeleteChange = { enabled ->
                             viewModel.setConfirmDeleteEnabled(enabled)
                         },
+                        onDarkModeChange = { dark ->
+                            viewModel.setDarkMode(dark)
+                        },
                         onSaveSettings = { budgetLimit, color, language, betaTesting, gPay, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup ->
                             viewModel.saveSettings(
                                 budgetLimit, color, language, betaTesting, gPay,
@@ -987,10 +1048,10 @@ fun DashboardScreen(
                             )
                         },
                         onExportReport = {
-                            ExportUtils.exportTransactionsToCsv(context, uiState.transactions, uiState.appLanguage)
+                            ExportUtils.exportTransactionsToCsv(context, uiState.allTransactions.ifEmpty { uiState.transactions }, uiState.appLanguage)
                         },
                         onBackupToGoogleDrive = {
-                            BackupUtils.backupToGoogleDrive(context, uiState.transactions, emptyList())
+                            viewModel.backupAllDataToGoogleDrive(context)
                         },
                         onRestoreFromGoogleDrive = {
                             filePickerLauncher.launch("*/*")
@@ -1249,6 +1310,18 @@ fun DashboardScreen(
                         }
                     }
 
+                    if (info.hasSettings || info.cloudSubscriptionCount > 0) {
+                        Text(
+                            text = if (isZh)
+                                "備份檔案包含：所有月份紀錄、固定收支(${info.cloudSubscriptionCount}筆) 及完整系統設定偏好。"
+                            else
+                                "Backup includes: all monthly history, recurring items (${info.cloudSubscriptionCount}), and system preferences.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF059669),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
                     if (info.uniqueCloudCount > 0) {
                         Text(
                             text = if (isZh)
@@ -1276,7 +1349,7 @@ fun DashboardScreen(
                     Button(
                         onClick = {
                             viewModel.restoreBackupJson(info.jsonContent, overwrite = false) { count ->
-                                val msg = if (isZh) "已成功合併 $count 筆雲端紀錄！" else "Successfully merged $count records!"
+                                val msg = if (isZh) "已成功合併 $count 筆紀錄及系統設定！" else "Successfully merged $count records and settings!"
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                             pendingBackupInfo = null
@@ -1289,7 +1362,7 @@ fun DashboardScreen(
                     OutlinedButton(
                         onClick = {
                             viewModel.restoreBackupJson(info.jsonContent, overwrite = true) { count ->
-                                val msg = if (isZh) "已成功覆蓋還原 $count 筆紀錄！" else "Successfully restored $count records!"
+                                val msg = if (isZh) "已成功覆蓋還原 $count 筆紀錄及系統設定！" else "Successfully restored $count records and settings!"
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                             pendingBackupInfo = null
@@ -1414,13 +1487,14 @@ fun TransactionItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Surface(
                     shape = CircleShape,
                     color = iconBgColor,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -1432,7 +1506,10 @@ fun TransactionItem(
                     }
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     val localizedCategory = AppStrings.getCategoryName(transaction.category, language)
                     val localizedNote = transaction.note.split(" • ").joinToString(" • ") { part ->
                         AppStrings.getSubCategoryName(part, language)
@@ -1441,32 +1518,26 @@ fun TransactionItem(
                     Text(
                         text = localizedCategory,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        if (localizedNote.isNotBlank()) {
-                            Text(
-                                text = "$localizedNote • $timeStr",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            Text(
-                                text = timeStr,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    val noteSubtitle = if (localizedNote.isNotBlank()) "$localizedNote • $timeStr" else timeStr
+                    Text(
+                        text = noteSubtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = "$amountPrefix$${String.format(Locale.getDefault(), "%,.0f", transaction.amount)}",

@@ -6,7 +6,7 @@ import java.util.UUID
 
 enum class AppThemeColor(val displayNameZh: String, val displayNameEn: String, val primaryColor: Color, val containerColor: Color) {
     INDIGO("靛藍", "Indigo", Color(0xFF4F46E5), Color(0xFFEEF2FF)),
-    EMERALD("綠色", "Green", Color(0xFF059669), Color(0xFFECFDF5)),
+    EMERALD("翡翠綠", "Emerald", Color(0xFF1B4A31), Color(0xFFECFDF5)),
     TEAL("藍色", "Blue", Color(0xFF0284C7), Color(0xFFE0F2FE)),
     ROSE("紅色", "Red", Color(0xFFE11D48), Color(0xFFFFE4E6)),
     SLATE("灰色", "Gray", Color(0xFF475569), Color(0xFFF1F5F9))
@@ -55,12 +55,20 @@ class SettingsPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("debit_settings", Context.MODE_PRIVATE)
 
     fun getThemeColor(): AppThemeColor {
-        val name = prefs.getString("theme_color", AppThemeColor.INDIGO.name)
-        return try { AppThemeColor.valueOf(name!!) } catch (e: Exception) { AppThemeColor.INDIGO }
+        val name = prefs.getString("theme_color", AppThemeColor.EMERALD.name)
+        return try { AppThemeColor.valueOf(name!!) } catch (e: Exception) { AppThemeColor.EMERALD }
     }
 
     fun setThemeColor(color: AppThemeColor) {
         prefs.edit().putString("theme_color", color.name).apply()
+    }
+
+    fun isDarkMode(): Boolean {
+        return prefs.getBoolean("dark_mode", false)
+    }
+
+    fun setDarkMode(enabled: Boolean) {
+        prefs.edit().putBoolean("dark_mode", enabled).apply()
     }
 
     fun getLanguage(): AppLanguage {
@@ -73,7 +81,7 @@ class SettingsPreferences(context: Context) {
     }
 
     fun isBetaTestingEnabled(): Boolean {
-        return prefs.getBoolean("beta_testing", true)
+        return prefs.getBoolean("beta_testing", false)
     }
 
     fun setBetaTestingEnabled(enabled: Boolean) {
@@ -105,6 +113,8 @@ class SettingsPreferences(context: Context) {
     fun getReminderMinute(): Int = prefs.getInt("reminder_minute", 0)
     fun setReminderTime(hour: Int, minute: Int) {
         prefs.edit().putInt("reminder_hour", hour).putInt("reminder_minute", minute).apply()
+        val single = listOf(ReminderTime(id = "reminder_1", hour = hour, minute = minute, enabled = isDailyReminderEnabled()))
+        saveReminderTimes(single)
     }
 
     fun getReminderTimes(): List<ReminderTime> {
@@ -133,7 +143,16 @@ class SettingsPreferences(context: Context) {
 
     fun saveReminderTimes(list: List<ReminderTime>) {
         val serialized = list.joinToString("|") { "${it.id},${it.hour},${it.minute},${if (it.enabled) 1 else 0}" }
-        prefs.edit().putString("reminder_times_v2", serialized).apply()
+        val first = list.firstOrNull()
+        if (first != null) {
+            prefs.edit()
+                .putInt("reminder_hour", first.hour)
+                .putInt("reminder_minute", first.minute)
+                .putString("reminder_times_v2", serialized)
+                .apply()
+        } else {
+            prefs.edit().putString("reminder_times_v2", serialized).apply()
+        }
     }
 
     fun isModern3DUiEnabled(): Boolean = prefs.getBoolean("modern_3d_ui", true)

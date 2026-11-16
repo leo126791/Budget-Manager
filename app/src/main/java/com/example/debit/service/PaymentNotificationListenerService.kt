@@ -89,7 +89,32 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         Log.d("PaymentService", "Notification received from pkg: $packageName | text: '$combined'")
 
-        // 1. Strict Exclusions: Exclude promotional / marketing / advertisement messages
+        // 1. Strict Whitelist: Only accept Google Pay and LINE Pay notifications
+        val isGooglePay = (
+            packageName == "com.google.android.apps.walletnfcrel" ||
+            packageName.contains("walletnfcrel") ||
+            packageName.contains("wallet") ||
+            (packageName == "com.google.android.gms" && (combined.contains("Google Pay", ignoreCase = true) || combined.contains("Google 錢包") || combined.contains("Google Wallet", ignoreCase = true) || combined.contains("Tap to pay", ignoreCase = true))) ||
+            combined.contains("Google Pay", ignoreCase = true) ||
+            combined.contains("Google 錢包") ||
+            combined.contains("Google Wallet", ignoreCase = true) ||
+            combined.contains("Tap to pay", ignoreCase = true)
+        )
+
+        val isLinePay = (
+            packageName.contains("linepay") ||
+            (packageName.contains("line") && (combined.contains("LINE Pay", ignoreCase = true) || combined.contains("LINE 錢包") || combined.contains("LINEPay", ignoreCase = true))) ||
+            combined.contains("LINE Pay", ignoreCase = true) ||
+            combined.contains("LINE 錢包") ||
+            combined.contains("LINEPay", ignoreCase = true)
+        )
+
+        if (!isGooglePay && !isLinePay) {
+            Log.d("PaymentService", "Notification is neither Google Pay nor LINE Pay (pkg: $packageName). Skipping.")
+            return
+        }
+
+        // 2. Strict Exclusions: Exclude promotional / marketing / advertisement messages
         val promoKeywords = listOf(
             "優惠", "折扣", "點數", "抽獎", "優惠券", "回饋", "領取", "現折", "廣告", "促銷",
             "限時", "邀請", "訂閱", "推薦", "特價", "紅利", "序號", "禮券", "好康", "活動", "問券"
@@ -99,7 +124,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. Action & Currency Verification (Income vs Expense)
+        // 3. Action & Currency Verification (Income vs Expense)
         val incomeKeywords = listOf(
             "入帳", "轉入", "存款", "存入", "退款", "退回", "撥款", "利息", "薪水", "收入",
             "Refund", "Deposit", "Received"
@@ -119,7 +144,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val transactionType = if (isIncomeNotif) TransactionType.INCOME else TransactionType.EXPENSE
 
-        // 3. Extract Amount
+        // 4. Extract Amount
         val amount = extractAmount(combined)
         if (amount == null || amount <= 0.0) {
             Log.d("PaymentService", "Could not extract valid amount from: '$combined'. Skipping.")
@@ -128,7 +153,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
 
         val currentTime = System.currentTimeMillis()
 
-        // 4. Synchronous In-Memory Deduplication Check (Window: 120s)
+        // 5. Synchronous In-Memory Deduplication Check (Window: 120s)
         synchronized(recentPaymentsCache) {
             recentPaymentsCache.removeAll { currentTime - it.timestamp > DEDUPLICATION_WINDOW_MS }
             val isInMemoryDuplicate = recentPaymentsCache.any {
@@ -144,7 +169,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val merchantName = extractMerchant(title, text)
         val category = if (transactionType == TransactionType.INCOME) "薪水" else inferCategory(combined, merchantName)
         val isZh = settingsPrefs.getLanguage() == AppLanguage.ZH
-        val paymentSource = if (combined.contains("LINE") || packageName.contains("line")) "LINE Pay" else "Google Pay"
+        val paymentSource = if (isLinePay) "LINE Pay" else "Google Pay"
 
         CoroutineScope(Dispatchers.IO).launch {
             val db = AppDatabase.getDatabase(context)

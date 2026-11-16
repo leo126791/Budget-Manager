@@ -7,9 +7,15 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/appInsightsSettings.xml
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+build_v*
+/app/build_v*
+scratch/
+.stitch_ui_extracted/
+.kotlin/

@@ -21,4 +21,7 @@ interface SavingsGoalDao {
 
     @Delete
     suspend fun deleteSavingsGoal(savingsGoal: SavingsGoal)
+
+    @Query("DELETE FROM savings_goals")
+    suspend fun deleteAllSavingsGoals()
 }

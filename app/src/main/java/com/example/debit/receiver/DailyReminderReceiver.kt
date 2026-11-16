@@ -67,6 +67,7 @@ class DailyReminderReceiver : BroadcastReceiver() {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .build()
@@ -102,9 +103,24 @@ class DailyReminderReceiver : BroadcastReceiver() {
 
         if (action == ReminderUtils.ACTION_DAILY_REMINDER || action == null) {
             if (settingsPrefs.isDailyReminderEnabled()) {
+                val reminderId = intent?.getStringExtra("reminder_id") ?: ""
                 val hour = intent?.getIntExtra("reminder_hour", 21) ?: 21
                 val minute = intent?.getIntExtra("reminder_minute", 0) ?: 0
-                showReminderNotification(context, settingsPrefs, hour, minute)
+
+                val prefs = context.getSharedPreferences("debit_reminder_history", Context.MODE_PRIVATE)
+                val cal = java.util.Calendar.getInstance()
+                val todayKey = "reminder_${reminderId}_${cal.get(java.util.Calendar.YEAR)}_${cal.get(java.util.Calendar.DAY_OF_YEAR)}"
+
+                // Check if already notified today for this reminder item
+                val alreadyNotifiedToday = prefs.getBoolean(todayKey, false)
+                if (!alreadyNotifiedToday) {
+                    prefs.edit().putBoolean(todayKey, true).apply()
+                    showReminderNotification(context, settingsPrefs, hour, minute)
+                } else {
+                    Log.d("DailyReminder", "Reminder $reminderId already alerted today, skipping.")
+                }
+
+                // Schedule next day's alarm
                 ReminderUtils.rescheduleAllReminders(context)
             }
         }

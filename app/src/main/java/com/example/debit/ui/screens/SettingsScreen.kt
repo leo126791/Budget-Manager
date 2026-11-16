@@ -8,6 +8,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +36,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Delete
 import com.example.debit.data.ReminderTime
 import androidx.compose.material.icons.filled.AccountBalanceWallet
@@ -59,10 +77,14 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.example.debit.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -96,6 +118,7 @@ import java.util.Locale
 fun SettingsScreen(
     initialTotalBudget: Double,
     currentThemeColor: AppThemeColor,
+    currentDarkMode: Boolean = false,
     currentLanguage: AppLanguage,
     currentBetaTestingEnabled: Boolean,
     currentGooglePayListenerEnabled: Boolean = false,
@@ -116,6 +139,7 @@ fun SettingsScreen(
     onDeleteReminderTime: (ReminderTime) -> Unit = {},
     onToggleReminderTime: (ReminderTime, Boolean) -> Unit = { _, _ -> },
     onConfirmDeleteChange: (Boolean) -> Unit = {},
+    onDarkModeChange: (Boolean) -> Unit = {},
     onSaveSettings: (
         budgetLimit: Double,
         themeColor: AppThemeColor,
@@ -160,6 +184,7 @@ fun SettingsScreen(
     var modern3DUiState by remember { mutableStateOf(currentModern3DUiEnabled) }
     var dragDateReorderState by remember { mutableStateOf(currentDragDateReorderEnabled) }
     var autoBackupState by remember { mutableStateOf(currentAutoBackupEnabled) }
+    var isDarkModeState by remember(currentDarkMode) { mutableStateOf(currentDarkMode) }
 
     val isZh = selectedLanguage == AppLanguage.ZH
 
@@ -228,6 +253,11 @@ fun SettingsScreen(
             onColorSelect = { newColor ->
                 selectedColor = newColor
                 triggerAutoSave(color = newColor)
+            },
+            isDarkMode = isDarkModeState,
+            onDarkModeChange = { newDark ->
+                isDarkModeState = newDark
+                onDarkModeChange(newDark)
             },
             selectedLanguage = selectedLanguage,
             onLanguageSelect = { newLang ->
@@ -330,16 +360,27 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = AppStrings.get("settings", selectedLanguage),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFEF3C7),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_piggy_bank),
+                                        contentDescription = "Piggy",
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "設定 (Settings)" else "Settings",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     },
                     navigationIcon = {
@@ -379,6 +420,8 @@ private fun SettingsBodyList(
     onBudgetInputChange: (String) -> Unit,
     selectedColor: AppThemeColor,
     onColorSelect: (AppThemeColor) -> Unit,
+    isDarkMode: Boolean = false,
+    onDarkModeChange: (Boolean) -> Unit = {},
     selectedLanguage: AppLanguage,
     onLanguageSelect: (AppLanguage) -> Unit,
     betaTestingState: Boolean,
@@ -411,6 +454,45 @@ private fun SettingsBodyList(
     onReplayOnboarding: () -> Unit
 ) {
     val isZh = selectedLanguage == AppLanguage.ZH
+    var showBudgetDialog by remember { mutableStateOf(false) }
+    var tempBudgetInput by remember { mutableStateOf(budgetInput) }
+
+    // Dialog for Target Budget
+    if (showBudgetDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showBudgetDialog = false },
+            title = {
+                Text(
+                    text = if (isZh) "設定本月目標小金庫" else "Set Target Budget",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = tempBudgetInput,
+                    onValueChange = { tempBudgetInput = it },
+                    label = { Text(if (isZh) "預算金額 ($)" else "Budget Amount ($)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onBudgetInputChange(tempBudgetInput)
+                    showBudgetDialog = false
+                }) {
+                    Text(if (isZh) "儲存" else "Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBudgetDialog = false }) {
+                    Text(if (isZh) "取消" else "Cancel")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -419,584 +501,775 @@ private fun SettingsBodyList(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Monthly Budget Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = AppStrings.get("set_budget", selectedLanguage),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                OutlinedTextField(
-                    value = budgetInput,
-                    onValueChange = onBudgetInputChange,
-                    label = { Text(AppStrings.get("monthly_budget", selectedLanguage)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
+        // Group 1: 預算與金庫設定 (Budget & Vault)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = if (isZh) "預算與金庫設定" else "Budget & Vault Settings",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
 
-        // 2. Appearance & Theme Color Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Palette,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = AppStrings.get("theme_color", selectedLanguage),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    AppThemeColor.entries.forEach { themeColor ->
-                        val isColorSelected = themeColor == selectedColor
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isColorSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = Modifier
-                                .bouncyClickable { onColorSelect(themeColor) }
-                                .border(
-                                    width = if (isColorSelected) 2.dp else 1.dp,
-                                    color = if (isColorSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Item 1: 本月目標小金庫
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                tempBudgetInput = budgetInput
+                                showBudgetDialog = true
+                            }
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF132B20) else Color(0xFFECFDF5),
+                                modifier = Modifier.size(38.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(CircleShape)
-                                        .background(themeColor.primaryColor)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_piggy_bank),
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF1B4A31),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Column {
                                 Text(
-                                    text = if (isZh) themeColor.displayNameZh else themeColor.displayNameEn,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isColorSelected) FontWeight.Bold else FontWeight.Normal
+                                    text = if (isZh) "本月目標小金庫" else "Target Budget Vault",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
-                    }
-                }
-            }
-        }
 
-        // 3. Language Selection Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Translate,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = AppStrings.get("app_language", selectedLanguage),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    AppLanguage.entries.forEachIndexed { index, lang ->
-                        SegmentedButton(
-                            selected = selectedLanguage == lang,
-                            onClick = { onLanguageSelect(lang) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = AppLanguage.entries.size)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(lang.displayName)
+                            val displayAmount = budgetInput.toDoubleOrNull() ?: 0.0
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isDarkMode) Color(0xFF143525) else Color(0xFFECFDF5)
+                            ) {
+                                Text(
+                                    text = "$${String.format(Locale.getDefault(), "%,.0f", displayAmount)} TWD",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDarkMode) Color(0xFFA7F3D0) else Color(0xFF1B4A31),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
-                }
-            }
-        }
 
-        // 4. Daily Reminder Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Item 2: 動態生活費預算池
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Column {
-                            Text(
-                                text = if (isZh) "每日記帳提醒" else "Daily Expense Reminder",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (isZh) "設定多個提醒時間，定時發送通知提醒記錄開銷" else "Set multiple reminder times to log your expenses",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = dailyReminderState,
-                        onCheckedChange = { enabled ->
-                            onDailyReminderMasterChange(enabled)
-                        }
-                    )
-                }
-
-                if (dailyReminderState) {
-                    HorizontalDivider()
-
-                    if (reminderTimes.isEmpty()) {
-                        Text(
-                            text = if (isZh) "尚未設定提醒時間" else "No reminder times set",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            reminderTimes.forEach { reminder ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "%02d:%02d".format(reminder.hour, reminder.minute),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF13302C) else Color(0xFFCCFBF1),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF2DD4BF) else Color(0xFF0F766E),
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Switch(
-                                            checked = reminder.enabled,
-                                            onCheckedChange = { onToggleReminderTime(reminder, it) }
-                                        )
-                                        IconButton(
-                                            onClick = { onDeleteReminderTime(reminder) },
-                                            modifier = Modifier.size(32.dp)
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "動態生活費預算池" else "Dynamic Budget Pool",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = true,
+                            onCheckedChange = { /* Always enabled as core feature */ },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF1B4A31)
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Item 3: Google Pay 自動記帳
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF1E2E42) else Color(0xFFDBEAFE),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalanceWallet,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF2563EB),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "Google Pay 自動記帳" else "Google Pay Auto Capture",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = googlePayListenerState,
+                            onCheckedChange = onGooglePayListenerChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Item 4: 定時記帳提醒
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF332A15) else Color(0xFFFEF3C7),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFFFBBF24) else Color(0xFFD97706),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "定時記帳提醒" else "Daily Reminder",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = dailyReminderState,
+                            onCheckedChange = onDailyReminderMasterChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = dailyReminderState,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (reminderTimes.isEmpty()) {
+                                Text(
+                                    text = if (isZh) "尚未設定提醒時間" else "No reminder times set",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    reminderTimes.forEach { reminder ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(if (isDarkMode) Color(0xFF1E2421) else Color(0xFFF3F4F6))
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = if (isZh) "刪除" else "Delete",
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(18.dp)
+                                            Text(
+                                                text = "%02d:%02d".format(reminder.hour, reminder.minute),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Switch(
+                                                    checked = reminder.enabled,
+                                                    onCheckedChange = { onToggleReminderTime(reminder, it) },
+                                                    colors = SwitchDefaults.colors(
+                                                        checkedThumbColor = Color.White,
+                                                        checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                                                    )
+                                                )
+                                                IconButton(
+                                                    onClick = { onDeleteReminderTime(reminder) },
+                                                    modifier = Modifier.size(32.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Delete,
+                                                        contentDescription = if (isZh) "刪除" else "Delete",
+                                                        tint = MaterialTheme.colorScheme.error,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    val currentCtx = LocalContext.current
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                TimePickerDialog(
-                                    currentCtx,
-                                    { _, hourOfDay, minute ->
-                                        onAddReminderTime(hourOfDay, minute)
+                            val currentCtx = LocalContext.current
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        TimePickerDialog(
+                                            currentCtx,
+                                            { _, hourOfDay, minute ->
+                                                onAddReminderTime(hourOfDay, minute)
+                                            },
+                                            21,
+                                            0,
+                                            true
+                                        ).show()
                                     },
-                                    21,
-                                    0,
-                                    true
-                                ).show()
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isZh) "新增提醒時間" else "Add Time",
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isZh) "新增提醒時間" else "Add Time",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
 
-                        OutlinedButton(
-                            onClick = onTestNotification,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isZh) "測試發送通知" else "Test Notification",
-                                fontWeight = FontWeight.Bold
-                            )
+                                OutlinedButton(
+                                    onClick = onTestNotification,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isZh) "測試通知" else "Test",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        // 5. Google Pay Auto-Tracking Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountBalanceWallet,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Column {
-                            Text(
-                                text = if (isZh) "Google Pay 消費自動記帳" else "Google Pay Auto-Tracking",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (isZh) "讀取 Google Pay 扣款通知並自動寫入記帳" else "Auto-capture Google Pay notifications",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = googlePayListenerState,
-                        onCheckedChange = onGooglePayListenerChange
-                    )
-                }
+        // Group 2: 個人化外觀與語言 (Appearance & Themes)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = if (isZh) "個人化外觀與語言" else "Appearance & Language",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
 
-                if (googlePayListenerState) {
-                    HorizontalDivider()
-                    val currentCtx = LocalContext.current
-                    val isGranted = PaymentNotificationListenerService.isPermissionGranted(currentCtx)
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Item 1: 深色外觀模式 (暗色模式開關)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF282B29) else Color(0xFFF3F4F6),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.DarkMode,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF6EE7B7) else Color(0xFF4B5563),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "色彩外觀 (亮色 / 暗色)" else "Appearance (Light / Dark)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { onDarkModeChange(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF1B4A31)
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Item 2: 系統語言
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                currentCtx.startActivity(intent)
+                                val nextLang = if (selectedLanguage == AppLanguage.ZH) AppLanguage.EN else AppLanguage.ZH
+                                onLanguageSelect(nextLang)
                             }
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Icon(
-                                imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (isGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF1E3A5F) else Color(0xFFDBEAFE),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Language,
+                                        contentDescription = null,
+                                        tint = Color(0xFF2563EB),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
                             Column {
                                 Text(
-                                    text = if (isGranted) {
-                                        if (isZh) "通知存取權限：已啟用 (運作中)" else "Notification Access: Granted"
-                                    } else {
-                                        if (isZh) "尚未開啟通知存取權限 (點此開啓權限)" else "Notification Access Required (Tap to Grant)"
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                    text = if (isZh) "系統語言" else "Language",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                if (!isGranted) {
-                                    Text(
-                                        text = if (isZh) "點擊此處前往系統設定，允許 Budget Manager 讀取通知" else "Tap to enable Notification Access in System Settings",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
                             }
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = if (selectedLanguage == AppLanguage.ZH) "繁體中文 (台灣)" else "English",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
             }
         }
 
-        // 6. Confirm Before Delete Card (Standalone Card)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        // Group 3: BETA 實驗性功能 (Beta Lab)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Text(
+                    text = if (isZh) "BETA 實驗性功能" else "BETA Features",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Surface(
+                    shape = CircleShape,
+                    color = if (isDarkMode) Color(0xFF142B20) else Color(0xFFD1FAE5)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isZh) "刪除前確認" else "Confirm Before Delete",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isZh) "刪除記帳紀錄或訂閱項目前顯示確認提示" else "Show confirmation dialog before deleting records",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = confirmDeleteState,
-                        onCheckedChange = onConfirmDeleteChange
+                    Text(
+                        text = if (isZh) "實驗性實驗室" else "Experimental Lab",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) Color(0xFF86EFAC) else Color(0xFF047857),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                     )
                 }
             }
-        }
 
-        // 7. Beta Testing & Experimental Features Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isZh) "加入 Beta 實驗性功能測試" else "Join Beta Testing",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isZh) "搶先體驗未正式發佈的實驗性功能" else "Get early access to experimental features",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = betaTestingState,
-                        onCheckedChange = onBetaTestingChange
-                    )
-                }
-
-                if (betaTestingState) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        modifier = Modifier.fillMaxWidth()
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Master Switch: 加入 Beta 實驗性測試
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(if (isDarkMode) Color.Transparent else Color(0xFFF0FDF4))
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-
-                            // 1. Income Tracking
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF132B20) else Color(0xFFDCFCE7),
+                                modifier = Modifier.size(38.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Science,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF166534),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     Text(
-                                        text = if (isZh) "收入記帳與收支概覽" else "Income & Net Savings",
+                                        text = if (isZh) "加入 Beta 實驗性測試" else "Join Beta Testing",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    Text(
-                                        text = if (isZh) "記錄薪水/獎金與月度收支平衡" else "Track income & monthly net savings",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = if (isDarkMode) Color(0xFF1B3D2B) else Color(0xFF1B4A31)
+                                    ) {
+                                        Text(
+                                            text = "BETA",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isDarkMode) Color(0xFFA7F3D0) else Color.White,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                        }
+
+                        Switch(
+                            checked = betaTestingState,
+                            onCheckedChange = onBetaTestingChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = betaTestingState,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                            // Feature 1: 收入記帳與收支概覽
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isDarkMode) Color(0xFF132B20) else Color(0xFFECFDF5),
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.AccountBalance,
+                                                contentDescription = null,
+                                                tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF059669),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = if (isZh) "收入記帳與收支概覽" else "Income & Balance Overview",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
                                 Switch(
                                     checked = incomeTrackingState,
-                                    onCheckedChange = onIncomeTrackingChange
+                                    onCheckedChange = onIncomeTrackingChange,
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF1B4A31)
+                                    )
                                 )
                             }
 
-                            HorizontalDivider()
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                            // 3. Search Feature
+                            // Feature 2: 關鍵字搜尋
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isZh) "關鍵字搜尋" else "Keyword Search",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = if (isZh) "搜尋消費備註、類別" else "Search notes & categories",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isDarkMode) Color(0xFF1E2E42) else Color(0xFFDBEAFE),
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = null,
+                                                tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF2563EB),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = if (isZh) "關鍵字搜尋" else "Keyword Search",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+
                                 Switch(
                                     checked = searchState,
-                                    onCheckedChange = onSearchChange
+                                    onCheckedChange = onSearchChange,
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF1B4A31)
+                                    )
                                 )
                             }
 
-                            HorizontalDivider()
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                            // 3. Multi Account
+                            // Feature 3: 支付方式分類
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isZh) "支付方式" else "Payment Methods",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = if (isZh) "區分現金、信用卡、LINE Pay等" else "Tag Cash, Credit Card, Line Pay",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isDarkMode) Color(0xFF13302C) else Color(0xFFCCFBF1),
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.CreditCard,
+                                                contentDescription = null,
+                                                tint = if (isDarkMode) Color(0xFF2DD4BF) else Color(0xFF0F766E),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = if (isZh) "支付方式分類" else "Payment Methods",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+
                                 Switch(
                                     checked = multiAccountState,
-                                    onCheckedChange = onMultiAccountChange
+                                    onCheckedChange = onMultiAccountChange,
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF1B4A31)
+                                    )
                                 )
                             }
 
-                            HorizontalDivider()
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                            // 8. Drag Date Reorder
+                            // Feature 4: 長按移動紀錄 (不建議開啟)
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isZh) "長按移動紀錄(不建議開啟)" else "Move Date on Long Press(not recommended)",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = if (isZh) "長按記帳紀錄快速將開銷移至其他日期" else "Long press a record to shift its date",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isDarkMode) Color(0xFF291A38) else Color(0xFFF3E8FF),
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.TouchApp,
+                                                contentDescription = null,
+                                                tint = if (isDarkMode) Color(0xFFC084FC) else Color(0xFF9333EA),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = if (isZh) "長按移動紀錄 (不建議開啟)" else "Long Press to Move (Beta)",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+
                                 Switch(
                                     checked = dragDateReorderState,
-                                    onCheckedChange = onDragDateReorderChange
+                                    onCheckedChange = onDragDateReorderChange,
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF1B4A31)
+                                    )
                                 )
                             }
                         }
@@ -1005,167 +1278,231 @@ private fun SettingsBodyList(
             }
         }
 
-        // 5. Data Backup & Cloud Sync Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        // Group 4: 雲端同步與資料管理 (Sync & Data)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = if (isZh) "雲端同步與資料管理" else "Cloud Sync & Data Management",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
             ) {
-                // Auto Backup Switch
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isZh) "自動備份" else "Auto-Backup",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val backupTimeFormatted = if (lastAutoBackupTime > 0) {
-                            val dateStr = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(lastAutoBackupTime))
-                            if (isZh) "上次自動備份：$dateStr" else "Last auto backup: $dateStr"
-                        } else {
-                            if (isZh) "每次記帳變更時自動建立資料備份快照" else "Auto create backup on every change"
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Item 1: 自動雲端備份
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF132B20) else Color(0xFFECFDF5),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF1B4A31),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "自動雲端備份" else "Auto Cloud Backup",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                        Text(
-                            text = backupTimeFormatted,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                        Switch(
+                            checked = autoBackupState,
+                            onCheckedChange = onAutoBackupChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                            )
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = autoBackupState,
-                        onCheckedChange = onAutoBackupChange
-                    )
-                }
 
-                HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                // Google Drive Backup & Restore
-                Text(
-                    text = if (isZh) "Google Drive 雲端備份與還原" else "Google Drive Cloud Backup",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (isZh) "安全地將您的記帳紀錄與預算設定備份至 Google Drive 雲端或進行備份檔還原。" else "Safely backup or restore your records with Google Drive.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onBackupToGoogleDrive,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                    // Item 2: Google Drive 備份與還原
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudUpload,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isZh) "備份至 Drive" else "Backup Drive",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF1E3A5F) else Color(0xFFDBEAFE),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudUpload,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF2563EB),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "Google Drive 備份與還原" else "Google Drive Sync",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onBackupToGoogleDrive,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isDarkMode) Color(0xFF242926) else Color(0xFFF3F4F6)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudUpload,
+                                    contentDescription = null,
+                                    tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF1B4A31),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isZh) "備份至 Drive" else "Backup to Drive",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = if (isDarkMode) Color(0xFFE2E8F0) else Color(0xFF1F2937)
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = onRestoreFromGoogleDrive,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isDarkMode) Color(0xFF242926) else Color(0xFFF3F4F6)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF2563EB),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isZh) "還原雲端備份" else "Restore Cloud",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = if (isDarkMode) Color(0xFFE2E8F0) else Color(0xFF1F2937)
+                                )
+                            }
+                        }
                     }
 
-                    OutlinedButton(
-                        onClick = onRestoreFromGoogleDrive,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Item 3: 匯出 CSV 財務報表
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isZh) "還原雲端備份" else "Restore Drive",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDarkMode) Color(0xFF173347) else Color(0xFFE0F2FE),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.FileDownload,
+                                        contentDescription = null,
+                                        tint = if (isDarkMode) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = if (isZh) "匯出 CSV 財務報表" else "Export CSV Report",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF191C1D),
+                            modifier = Modifier.clickable { onExportReport() }
+                        ) {
+                            Text(
+                                text = if (isZh) "匯出" else "Export",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
                     }
-                }
-
-                HorizontalDivider()
-
-                // Export Financial Report
-                Text(
-                    text = if (isZh) "財務報表匯出" else "Export Financial Report",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (isZh) "將所有記帳紀錄匯出為 CSV 報表檔，方便於 Excel 或 Numbers 中開啟與備份。" else "Export all transaction records to a CSV file for Excel/Numbers backup.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedButton(
-                    onClick = onExportReport,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FileDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (isZh) "匯出 CSV 財務報表" else "Export CSV Report",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                HorizontalDivider()
-
-                // Replay Onboarding Animation Button
-                OutlinedButton(
-                    onClick = onReplayOnboarding,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = if (isZh) "體驗/重看啟動引導動畫" else "Replay Startup Onboarding",
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
         }
 
-        // 6. App Version Footer Section
+        // Version & Footer Info
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 16.dp),
+                .padding(top = 8.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Budget Manager Beta v1.1.0",
+                text = "Budget Manager v1.1.1",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = if (isZh) "內部測試版 • 預算管家" else "Tester Edition • Internal Build",
+                text = if (isZh) "版本 1.1.1・記帳與預算管家" else "Version 1.1.1 • Budget Manager",
                 style = MaterialTheme.typography.bodySmall,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.outline
             )
         }
     }

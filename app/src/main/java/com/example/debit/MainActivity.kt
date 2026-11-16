@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.debit.data.AppDatabase
+import com.example.debit.data.AppThemeColor
 import com.example.debit.data.DebitRepository
 import com.example.debit.ui.DebitViewModel
 import com.example.debit.ui.DebitViewModelFactory
@@ -47,7 +48,7 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsState()
             val isInitialized by viewModel.isInitialized.collectAsState()
 
-            DebitTheme(themeColor = uiState.themeColor) {
+            DebitTheme(darkTheme = uiState.isDarkMode, themeColor = AppThemeColor.EMERALD) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

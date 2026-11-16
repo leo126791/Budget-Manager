@@ -12,72 +12,39 @@ import com.example.debit.data.AppThemeColor
 fun DebitTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
-    themeColor: AppThemeColor = AppThemeColor.INDIGO,
+    themeColor: AppThemeColor = AppThemeColor.EMERALD,
     content: @Composable () -> Unit
 ) {
     val primaryColor = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFF6366F1)
-        AppThemeColor.EMERALD -> Color(0xFF10B981)
-        AppThemeColor.TEAL -> Color(0xFF06B6D4)
-        AppThemeColor.ROSE -> Color(0xFFF43F5E)
-        AppThemeColor.SLATE -> Color(0xFF64748B)
+        AppThemeColor.INDIGO -> Color(0xFF4F46E5)
+        AppThemeColor.EMERALD -> Color(0xFF1B4A31)
+        AppThemeColor.TEAL -> Color(0xFF0284C7)
+        AppThemeColor.ROSE -> Color(0xFFE11D48)
+        AppThemeColor.SLATE -> Color(0xFF475569)
     }
 
     val containerColor = themeColor.containerColor
 
-    // Dark Theme Colors custom tailored per theme
-    val darkBackground = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFF0D0F1D)
-        AppThemeColor.EMERALD -> Color(0xFF041710)
-        AppThemeColor.TEAL -> Color(0xFF051522)
-        AppThemeColor.ROSE -> Color(0xFF1A060D)
-        AppThemeColor.SLATE -> Color(0xFF0F172A)
-    }
-
-    val darkSurface = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFF1A1D33)
-        AppThemeColor.EMERALD -> Color(0xFF0B2B1F)
-        AppThemeColor.TEAL -> Color(0xFF0D2638)
-        AppThemeColor.ROSE -> Color(0xFF2E0F1A)
-        AppThemeColor.SLATE -> Color(0xFF1E293B)
-    }
-
-    val darkSurfaceLow = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFF15172A)
-        AppThemeColor.EMERALD -> Color(0xFF072118)
-        AppThemeColor.TEAL -> Color(0xFF081E2E)
-        AppThemeColor.ROSE -> Color(0xFF240A14)
-        AppThemeColor.SLATE -> Color(0xFF172033)
-    }
-
-    val darkSurfaceHigh = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFF242847)
-        AppThemeColor.EMERALD -> Color(0xFF123C2C)
-        AppThemeColor.TEAL -> Color(0xFF14354C)
-        AppThemeColor.ROSE -> Color(0xFF3D1625)
-        AppThemeColor.SLATE -> Color(0xFF27354A)
-    }
-
-    // Light Theme Colors
+    // Light Theme Colors custom tailored per theme
     val lightBackground = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFFF5F3FF)
-        AppThemeColor.EMERALD -> Color(0xFFECFDF5)
+        AppThemeColor.INDIGO -> Color(0xFFF8F9FA)
+        AppThemeColor.EMERALD -> Color(0xFFF4F6F4)
         AppThemeColor.TEAL -> Color(0xFFF0F9FF)
         AppThemeColor.ROSE -> Color(0xFFFFF1F2)
         AppThemeColor.SLATE -> Color(0xFFF8FAFC)
     }
 
     val lightSurface = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFFEDE9FE)
-        AppThemeColor.EMERALD -> Color(0xFFD1FAE5)
-        AppThemeColor.TEAL -> Color(0xFFE0F2FE)
-        AppThemeColor.ROSE -> Color(0xFFFFE4E6)
-        AppThemeColor.SLATE -> Color(0xFFF1F5F9)
+        AppThemeColor.INDIGO -> Color(0xFFFFFFFF)
+        AppThemeColor.EMERALD -> Color(0xFFFFFFFF)
+        AppThemeColor.TEAL -> Color(0xFFFFFFFF)
+        AppThemeColor.ROSE -> Color(0xFFFFFFFF)
+        AppThemeColor.SLATE -> Color(0xFFFFFFFF)
     }
 
     val lightSurfaceHigh = when (themeColor) {
-        AppThemeColor.INDIGO -> Color(0xFFDDD6FE)
-        AppThemeColor.EMERALD -> Color(0xFFA7F3D0)
+        AppThemeColor.INDIGO -> StitchSurfaceContainerHigh
+        AppThemeColor.EMERALD -> StitchSurfaceContainerHigh
         AppThemeColor.TEAL -> Color(0xFFBAE6FD)
         AppThemeColor.ROSE -> Color(0xFFFECDD3)
         AppThemeColor.SLATE -> Color(0xFFE2E8F0)
@@ -88,31 +55,45 @@ fun DebitTheme(
         onPrimary = Color.White,
         primaryContainer = containerColor,
         onPrimaryContainer = primaryColor,
-        secondary = TealSecondary,
-        tertiary = AmberAccent,
+        secondary = StitchSecondary,
+        secondaryContainer = StitchSecondaryContainer,
+        tertiary = StitchAmberTertiary,
         background = lightBackground,
         surface = lightSurface,
-        surfaceContainer = lightSurface,
+        surfaceContainer = StitchSurfaceContainer,
         surfaceContainerHigh = lightSurfaceHigh,
-        surfaceContainerLow = Color(0xFFFFFFFF),
-        error = RedExpense,
+        surfaceContainerLow = StitchSurfaceContainerLow,
+        surfaceContainerLowest = StitchSurfaceContainerLowest,
+        error = StitchCoralExpense,
         errorContainer = RedExpenseContainer,
         onErrorContainer = Color(0xFF991B1B)
     )
 
     val darkScheme = darkColorScheme(
-        primary = primaryColor,
-        onPrimary = Color.White,
-        primaryContainer = primaryColor.copy(alpha = 0.35f),
-        onPrimaryContainer = Color.White,
-        secondary = TealSecondary,
-        tertiary = AmberAccent,
-        background = darkBackground,
-        surface = darkSurface,
-        surfaceContainer = darkSurface,
-        surfaceContainerLow = darkSurfaceLow,
-        surfaceContainerHigh = darkSurfaceHigh,
-        error = RedExpense
+        primary = Color(0xFF6EE7B7),
+        onPrimary = Color(0xFF003822),
+        primaryContainer = Color(0xFF1B4A31),
+        onPrimaryContainer = Color(0xFFA9DBB9),
+        secondary = StitchSecondaryContainer,
+        onSecondary = Color(0xFF003731),
+        secondaryContainer = Color(0xFF004F46),
+        onSecondaryContainer = Color(0xFF8CF5E4),
+        tertiary = StitchAmberTertiary,
+        background = Color(0xFF111413),
+        onBackground = Color(0xFFE1E3E1),
+        surface = Color(0xFF191C1B),
+        onSurface = Color(0xFFE1E3E1),
+        surfaceVariant = Color(0xFF404943),
+        onSurfaceVariant = Color(0xFFC0C9C1),
+        surfaceContainer = Color(0xFF1D211F),
+        surfaceContainerLow = Color(0xFF191C1B),
+        surfaceContainerLowest = Color(0xFF131715),
+        surfaceContainerHigh = Color(0xFF282B29),
+        outline = Color(0xFF8A938C),
+        outlineVariant = Color(0xFF404943),
+        error = StitchCoralExpense,
+        errorContainer = Color(0xFF93000A),
+        onErrorContainer = Color(0xFFFFDAD6)
     )
 
     val colorScheme = if (darkTheme) darkScheme else lightScheme

@@ -1,6 +1,7 @@
 package com.example.debit.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -65,7 +66,8 @@ private data class Tuple3(
 private data class Tuple4(
     val lastBackup: Long,
     val init: Boolean,
-    val confirmDelete: Boolean
+    val confirmDelete: Boolean,
+    val isDark: Boolean
 )
 
 private data class PrefsTuple(
@@ -86,7 +88,8 @@ private data class PrefsTuple(
     val autoBackupOn: Boolean,
     val lastBackupTime: Long,
     val initialized: Boolean,
-    val confirmDeleteOn: Boolean
+    val confirmDeleteOn: Boolean,
+    val isDarkMode: Boolean
 )
 
 data class DebitUiState(
@@ -94,6 +97,7 @@ data class DebitUiState(
     val availableMonths: List<String> = emptyList(),
     val isCurrentMonth: Boolean = true,
     val transactions: List<Transaction> = emptyList(),
+    val allTransactions: List<Transaction> = emptyList(),
     val filteredTransactions: List<Transaction> = emptyList(),
     val totalExpense: Double = 0.0,
     val totalIncome: Double = 0.0,
@@ -102,6 +106,7 @@ data class DebitUiState(
     val totalBudgetLimit: Double = 0.0,
     val categoryExpenses: Map<String, Double> = emptyMap(),
     val themeColor: AppThemeColor = AppThemeColor.INDIGO,
+    val isDarkMode: Boolean = false,
     val appLanguage: AppLanguage = AppLanguage.ZH,
     val searchQuery: String = "",
     val subscriptions: List<Subscription> = emptyList(),
@@ -188,6 +193,9 @@ class DebitViewModel(
 
     private val _confirmDeleteEnabled = MutableStateFlow(settingsPrefs.isConfirmDeleteEnabled())
     val confirmDeleteEnabled: StateFlow<Boolean> = _confirmDeleteEnabled
+
+    private val _isDarkMode = MutableStateFlow(settingsPrefs.isDarkMode())
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode
 
     init {
         viewModelScope.launch {
@@ -279,8 +287,8 @@ class DebitViewModel(
         Tuple3(sub, multi, m3d, dragDate, autoBackup)
     }
 
-    private val flow4 = combine(_lastAutoBackupTime, _isInitialized, _confirmDeleteEnabled) { lastBackup, init, confirmDelete ->
-        Tuple4(lastBackup, init, confirmDelete)
+    private val flow4 = combine(_lastAutoBackupTime, _isInitialized, _confirmDeleteEnabled, _isDarkMode) { lastBackup, init, confirmDelete, isDark ->
+        Tuple4(lastBackup, init, confirmDelete, isDark)
     }
 
     private val settingsTupleFlow = combine(flow1, flow2, flow3, flow4) { t1, t2, t3, t4 ->
@@ -302,7 +310,8 @@ class DebitViewModel(
             autoBackupOn = t3.autoBackup,
             lastBackupTime = t4.lastBackup,
             initialized = t4.init,
-            confirmDeleteOn = t4.confirmDelete
+            confirmDeleteOn = t4.confirmDelete,
+            isDarkMode = t4.isDark
         )
     }
 
@@ -400,6 +409,7 @@ class DebitViewModel(
             availableMonths = allMonths,
             isCurrentMonth = selectedYM == systemYearMonthStr,
             transactions = currentMonthTransactions,
+            allTransactions = transactions,
             filteredTransactions = filteredTx,
             totalExpense = totalExp,
             totalIncome = totalInc,
@@ -408,6 +418,7 @@ class DebitViewModel(
             totalBudgetLimit = totalBgt,
             categoryExpenses = catExpenses,
             themeColor = themeColor,
+            isDarkMode = prefsTuple.isDarkMode,
             appLanguage = language,
             searchQuery = query,
             subscriptions = subscriptions,
@@ -435,6 +446,7 @@ class DebitViewModel(
         initialValue = DebitUiState(
             currentYearMonth = systemYearMonthStr,
             themeColor = settingsPrefs.getThemeColor(),
+            isDarkMode = settingsPrefs.isDarkMode(),
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
             isGooglePayListenerEnabled = settingsPrefs.isGooglePayListenerEnabled(),
@@ -468,17 +480,49 @@ class DebitViewModel(
         if (settingsPrefs.isAutoBackupEnabled()) {
             viewModelScope.launch(Dispatchers.IO) {
                 val allTx = repository.allTransactions.first()
-                val monthBgts = repository.getBudgetsForMonth("GLOBAL").first()
-                BackupUtils.performAutoBackup(getApplication(), allTx, monthBgts)
+                val allBgts = repository.allBudgets.first()
+                val allSubs = repository.allSubscriptions.first()
+                val allGoals = repository.allSavingsGoals.first()
+                BackupUtils.performAutoBackup(
+                    context = getApplication(),
+                    transactions = allTx,
+                    budgets = allBgts,
+                    subscriptions = allSubs,
+                    savingsGoals = allGoals,
+                    settingsPrefs = settingsPrefs
+                )
                 _lastAutoBackupTime.value = settingsPrefs.getLastAutoBackupTime()
             }
+        }
+    }
+
+    fun backupAllDataToGoogleDrive(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val allTx = repository.allTransactions.first()
+            val allBgts = repository.allBudgets.first()
+            val allSubs = repository.allSubscriptions.first()
+            val allGoals = repository.allSavingsGoals.first()
+            BackupUtils.backupToGoogleDrive(
+                context = context,
+                transactions = allTx,
+                budgets = allBgts,
+                subscriptions = allSubs,
+                savingsGoals = allGoals,
+                settingsPrefs = settingsPrefs
+            )
         }
     }
 
     fun restoreBackupJson(jsonContent: String, overwrite: Boolean = false, onResult: (txCount: Int) -> Unit) {
         viewModelScope.launch {
             try {
-                val (txList, bgtList) = BackupUtils.parseBackupJson(jsonContent)
+                val fullBackup = BackupUtils.parseFullBackup(jsonContent)
+                val txList = fullBackup.transactions
+                val bgtList = fullBackup.budgets
+                val subList = fullBackup.subscriptions
+                val goalsList = fullBackup.savingsGoals
+                val settings = fullBackup.settings
+
                 val currentTxs = repository.allTransactions.first()
                 val localKeys = currentTxs.map { "${it.date}_${it.amount}_${it.category}_${it.note}" }.toSet()
 
@@ -489,6 +533,18 @@ class DebitViewModel(
                         repository.addTransaction(tx)
                         count++
                     }
+                    repository.deleteAllBudgets()
+                    bgtList.forEach { bgt ->
+                        repository.setBudget(bgt)
+                    }
+                    repository.deleteAllSubscriptions()
+                    subList.forEach { sub ->
+                        repository.addSubscription(sub)
+                    }
+                    repository.deleteAllSavingsGoals()
+                    goalsList.forEach { goal ->
+                        repository.addSavingsGoal(goal)
+                    }
                 } else {
                     txList.forEach { tx ->
                         val key = "${tx.date}_${tx.amount}_${tx.category}_${tx.note}"
@@ -497,10 +553,75 @@ class DebitViewModel(
                             count++
                         }
                     }
+                    bgtList.forEach { bgt ->
+                        repository.setBudget(bgt)
+                    }
+                    val currentSubs = repository.allSubscriptions.first()
+                    val currentSubNames = currentSubs.map { it.name }.toSet()
+                    subList.forEach { sub ->
+                        if (!currentSubNames.contains(sub.name)) {
+                            repository.addSubscription(sub)
+                        }
+                    }
+                    val currentGoals = repository.allSavingsGoals.first()
+                    val currentGoalTitles = currentGoals.map { it.title }.toSet()
+                    goalsList.forEach { goal ->
+                        if (!currentGoalTitles.contains(goal.title)) {
+                            repository.addSavingsGoal(goal)
+                        }
+                    }
                 }
 
-                bgtList.forEach { bgt ->
-                    repository.setBudget(bgt)
+                // Restore system settings if available
+                settings?.let { s ->
+                    val color = try { AppThemeColor.valueOf(s.themeColor) } catch (_: Exception) { AppThemeColor.EMERALD }
+                    val lang = try { AppLanguage.valueOf(s.language) } catch (_: Exception) { AppLanguage.ZH }
+
+                    settingsPrefs.setThemeColor(color)
+                    settingsPrefs.setDarkMode(s.isDarkMode)
+                    settingsPrefs.setLanguage(lang)
+                    settingsPrefs.setBetaTestingEnabled(s.betaTesting)
+                    settingsPrefs.setGooglePayListenerEnabled(s.googlePayListener)
+                    settingsPrefs.setDailyReminderEnabled(s.dailyReminderEnabled)
+                    settingsPrefs.setReminderTime(s.reminderHour, s.reminderMinute)
+                    if (s.reminderTimesRaw.isNotBlank()) {
+                        val parsedReminders = s.reminderTimesRaw.split("|").filter { it.isNotBlank() }.map { item ->
+                            val parts = item.split(",")
+                            ReminderTime(
+                                id = parts[0],
+                                hour = parts[1].toInt(),
+                                minute = parts[2].toInt(),
+                                enabled = parts.getOrNull(3) == "1"
+                            )
+                        }
+                        settingsPrefs.saveReminderTimes(parsedReminders)
+                    }
+                    settingsPrefs.setConfirmDeleteEnabled(s.confirmDelete)
+                    settingsPrefs.setIncomeTrackingEnabled(s.incomeTracking)
+                    settingsPrefs.setSearchEnabled(s.searchFeature)
+                    settingsPrefs.setSubscriptionEnabled(s.subscriptionFeature)
+                    settingsPrefs.setMultiAccountEnabled(s.multiAccount)
+                    settingsPrefs.setModern3DUiEnabled(s.modern3DUi)
+                    settingsPrefs.setDragDateReorderEnabled(s.dragDateReorder)
+                    settingsPrefs.setAutoBackupEnabled(s.autoBackup)
+
+                    _themeColor.value = color
+                    _isDarkMode.value = s.isDarkMode
+                    _appLanguage.value = lang
+                    _betaTestingEnabled.value = s.betaTesting
+                    _googlePayListenerEnabled.value = s.googlePayListener
+                    _dailyReminderEnabled.value = s.dailyReminderEnabled
+                    _reminderTimes.value = settingsPrefs.getReminderTimes()
+                    _confirmDeleteEnabled.value = s.confirmDelete
+                    _incomeTrackingEnabled.value = s.incomeTracking
+                    _searchEnabled.value = s.searchFeature
+                    _subscriptionEnabled.value = s.subscriptionFeature
+                    _multiAccountEnabled.value = s.multiAccount
+                    _modern3DUiEnabled.value = s.modern3DUi
+                    _dragDateReorderEnabled.value = s.dragDateReorder
+                    _autoBackupEnabled.value = s.autoBackup
+
+                    ReminderUtils.rescheduleAllReminders(getApplication())
                 }
 
                 BudgetWidgetProvider.updateAllWidgets(getApplication())
@@ -523,7 +644,8 @@ class DebitViewModel(
         multiAccountEnabled: Boolean = true,
         modern3DUiEnabled: Boolean = true,
         dragDateReorderEnabled: Boolean = true,
-        autoBackupEnabled: Boolean = true
+        autoBackupEnabled: Boolean = true,
+        isDarkMode: Boolean = _isDarkMode.value
     ) {
         viewModelScope.launch {
             val effGooglePay = betaTestingEnabled && googlePayListenerEnabled
@@ -545,6 +667,7 @@ class DebitViewModel(
             settingsPrefs.setModern3DUiEnabled(effModern3D)
             settingsPrefs.setDragDateReorderEnabled(effDragDate)
             settingsPrefs.setAutoBackupEnabled(autoBackupEnabled)
+            settingsPrefs.setDarkMode(isDarkMode)
 
             _themeColor.value = color
             _appLanguage.value = language
@@ -557,6 +680,7 @@ class DebitViewModel(
             _modern3DUiEnabled.value = effModern3D
             _dragDateReorderEnabled.value = effDragDate
             _autoBackupEnabled.value = autoBackupEnabled
+            _isDarkMode.value = isDarkMode
 
             repository.setBudget(
                 Budget(
@@ -720,6 +844,13 @@ class DebitViewModel(
         }
     }
 
+    fun setDarkMode(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsPrefs.setDarkMode(enabled)
+            _isDarkMode.value = enabled
+        }
+    }
+
     fun setAppLanguage(language: AppLanguage) {
         viewModelScope.launch {
             settingsPrefs.setLanguage(language)
@@ -745,6 +876,7 @@ class DebitViewModel(
         viewModelScope.launch {
             settingsPrefs.setDailyReminderEnabled(enabled)
             _dailyReminderEnabled.value = enabled
+            _reminderTimes.value = settingsPrefs.getReminderTimes()
             ReminderUtils.rescheduleAllReminders(getApplication())
         }
     }
@@ -822,17 +954,19 @@ class DebitViewModel(
 
     fun completeOnboarding(
         budgetLimit: Double,
-        color: AppThemeColor,
+        color: AppThemeColor = AppThemeColor.EMERALD,
         language: AppLanguage,
         googlePayListenerEnabled: Boolean = false,
         dailyReminderEnabled: Boolean = false,
         reminderHour: Int = 21,
         reminderMinute: Int = 0,
-        confirmDeleteEnabled: Boolean = true
+        confirmDeleteEnabled: Boolean = true,
+        darkMode: Boolean = false
     ) {
         viewModelScope.launch {
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
+            settingsPrefs.setDarkMode(darkMode)
             settingsPrefs.setGooglePayListenerEnabled(googlePayListenerEnabled)
             settingsPrefs.setDailyReminderEnabled(dailyReminderEnabled)
             settingsPrefs.setReminderTime(reminderHour, reminderMinute)
@@ -841,6 +975,8 @@ class DebitViewModel(
 
             _themeColor.value = color
             _appLanguage.value = language
+            _isDarkMode.value = darkMode
+            _googlePayListenerEnabled.value = googlePayListenerEnabled
             _googlePayListenerEnabled.value = googlePayListenerEnabled
             _dailyReminderEnabled.value = dailyReminderEnabled
             _reminderTimes.value = settingsPrefs.getReminderTimes()

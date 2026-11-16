@@ -58,12 +58,9 @@ object ReminderUtils {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
 
-            if (timeInMillis < now - 60_000L) {
-                // Time is in the past (earlier than 1 minute ago), schedule for tomorrow
+            // If scheduled time has already passed today (or is right now), schedule for tomorrow
+            if (timeInMillis <= now) {
                 add(Calendar.DAY_OF_YEAR, 1)
-            } else if (timeInMillis <= now) {
-                // Time is within current minute, trigger in 2 seconds
-                timeInMillis = now + 2_000L
             }
         }
 
