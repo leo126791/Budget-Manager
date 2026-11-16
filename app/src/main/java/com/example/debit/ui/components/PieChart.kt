@@ -459,7 +459,7 @@ fun ExpenseTrendLineChartCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isZh) "📈 消費走勢動態折線圖" else "📈 Expense Trend Chart",
+                    text = if (isZh) "消費走勢圖" else "Expense Trend Chart",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
