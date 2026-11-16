@@ -130,6 +130,7 @@ import com.example.debit.ui.components.Modern3DStatRow
 import com.example.debit.ui.components.Modern3DTransactionItem
 import com.example.debit.ui.dialogs.AddTransactionDialog
 import com.example.debit.ui.dialogs.BudgetSettingsDialog
+import com.example.debit.ui.dialogs.HelpDialog
 import com.example.debit.ui.dialogs.MonthSelectorDialog
 import com.example.debit.ui.dialogs.MonthlyBreakdownDialog
 import com.example.debit.ui.utils.AppStrings
@@ -251,6 +252,7 @@ fun DashboardScreen(
     var selectedBottomNavIndex by remember { mutableIntStateOf(0) }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
     var showMonthSelectorDialog by remember { mutableStateOf(false) }
     var showMonthlyBreakdownDialog by remember { mutableStateOf(false) }
     var showAddSubscriptionDialog by remember { mutableStateOf(false) }
@@ -325,7 +327,7 @@ fun DashboardScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* Help / Tips */ }) {
+                        IconButton(onClick = { showHelpDialog = true }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = if (isZh) "說明" else "Help",
@@ -1064,6 +1066,16 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+
+    if (showHelpDialog) {
+        HelpDialog(
+            language = lang,
+            onDismissRequest = { showHelpDialog = false },
+            onReplayOnboarding = {
+                viewModel.resetOnboarding()
+            }
+        )
     }
 
     if (showAddDialog) {
