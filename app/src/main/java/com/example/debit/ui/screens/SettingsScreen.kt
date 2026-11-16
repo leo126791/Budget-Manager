@@ -1493,13 +1493,13 @@ private fun SettingsBodyList(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Budget Manager v1.1.1",
+                text = "Budget Manager v1.2.0",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = if (isZh) "版本 1.1.1・記帳與預算管家" else "Version 1.1.1 • Budget Manager",
+                text = if (isZh) "版本 1.2.0・記帳與預算管家" else "Version 1.2.0 • Budget Manager",
                 style = MaterialTheme.typography.bodySmall,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.outline
