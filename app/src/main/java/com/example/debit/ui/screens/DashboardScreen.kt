@@ -552,32 +552,20 @@ fun DashboardScreen(
                             }
                         }
 
-                        // Hero Budget Card
-                        if (uiState.isModern3DUiEnabled) {
-                            item {
-                                Modern3DSavingsHeroCard(
-                                    totalBudget = uiState.totalBudgetLimit,
-                                    totalExpense = uiState.totalExpense,
-                                    remainingBudget = uiState.remainingBudget,
-                                    language = lang,
-                                    onOpenMonthlyBreakdown = { showMonthlyBreakdownDialog = true }
-                                )
-                            }
-                        } else {
-                            item {
-                                BudgetOverviewCard(
-                                    totalBudget = uiState.totalBudgetLimit,
-                                    totalExpense = uiState.totalExpense,
-                                    todayExpense = uiState.todayExpense,
-                                    remainingBudget = uiState.remainingBudget,
-                                    progress = uiState.totalBudgetProgress,
-                                    isOverBudget = uiState.isOverBudget,
-                                    isNearLimit = uiState.isNearBudgetLimit,
-                                    language = lang,
-                                    onOpenBudgetSettings = { selectedBottomNavIndex = 3 },
-                                    onOpenMonthlyBreakdown = { showMonthlyBreakdownDialog = true }
-                                )
-                            }
+                        // Hero Budget Card (Style A: Linear / Apple Wallet Fintech Hero Asset Card)
+                        item {
+                            BudgetOverviewCard(
+                                totalBudget = uiState.totalBudgetLimit,
+                                totalExpense = uiState.totalExpense,
+                                todayExpense = uiState.todayExpense,
+                                remainingBudget = uiState.remainingBudget,
+                                progress = uiState.totalBudgetProgress,
+                                isOverBudget = uiState.isOverBudget,
+                                isNearLimit = uiState.isNearBudgetLimit,
+                                language = lang,
+                                onOpenBudgetSettings = { selectedBottomNavIndex = 3 },
+                                onOpenMonthlyBreakdown = { showMonthlyBreakdownDialog = true }
+                            )
                         }
 
                         // Recent Transactions Section Header
@@ -632,77 +620,43 @@ fun DashboardScreen(
                                                 }
                                             }
                                     ) {
-                                        if (uiState.isModern3DUiEnabled) {
-                                            Modern3DTransactionItem(
-                                                transaction = transaction,
-                                                language = lang,
-                                                isDragDateReorderEnabled = uiState.isDragDateReorderEnabled,
-                                                onStartDrag = {
-                                                    draggingTransaction = transaction
-                                                    dragOffset = Offset.Zero
-                                                    hoveredDateKey = null
-                                                    draggedItemRect = null
-                                                },
-                                                onDrag = { dragAmount ->
-                                                    dragOffset += dragAmount
-                                                    val startRect = draggedItemRect
-                                                    if (startRect != null) {
-                                                        val currentTouchY = startRect.center.y + dragOffset.y
-                                                        hoveredDateKey = findClosestDateHeaderKey(currentTouchY, dateHeaderBoundsMap)
-                                                    }
-                                                },
-                                                onEndDrag = {
-                                                    if (draggingTransaction != null && hoveredDateKey != null) {
-                                                        val newDateMillis = parseDateKeyToMillis(hoveredDateKey!!, draggingTransaction!!.date)
-                                                        viewModel.moveTransactionToDate(draggingTransaction!!, newDateMillis)
-                                                    }
-                                                    draggingTransaction = null
-                                                    dragOffset = Offset.Zero
-                                                    hoveredDateKey = null
-                                                    draggedItemRect = null
-                                                },
-                                                onEdit = { editingTransaction = transaction },
-                                                onDelete = { viewModel.deleteTransaction(transaction) }
-                                            )
-                                        } else {
-                                            TransactionItem(
-                                                transaction = transaction,
-                                                language = lang,
-                                                isDragDateReorderEnabled = uiState.isDragDateReorderEnabled,
-                                                onStartDrag = {
-                                                    draggingTransaction = transaction
-                                                    dragOffset = Offset.Zero
-                                                    hoveredDateKey = null
-                                                    draggedItemRect = null
-                                                },
-                                                onDrag = { dragAmount ->
-                                                    dragOffset += dragAmount
-                                                    val startRect = draggedItemRect
-                                                    if (startRect != null) {
-                                                        val currentTouchY = startRect.center.y + dragOffset.y
-                                                        hoveredDateKey = findClosestDateHeaderKey(currentTouchY, dateHeaderBoundsMap)
-                                                    }
-                                                },
-                                                onEndDrag = {
-                                                    if (draggingTransaction != null && hoveredDateKey != null) {
-                                                        val newDateMillis = parseDateKeyToMillis(hoveredDateKey!!, draggingTransaction!!.date)
-                                                        viewModel.moveTransactionToDate(draggingTransaction!!, newDateMillis)
-                                                    }
-                                                    draggingTransaction = null
-                                                    dragOffset = Offset.Zero
-                                                    hoveredDateKey = null
-                                                    draggedItemRect = null
-                                                },
-                                                onEdit = { editingTransaction = transaction },
-                                                onDelete = {
-                                                    if (uiState.isConfirmDeleteEnabled) {
-                                                        deletingTransaction = transaction
-                                                    } else {
-                                                        viewModel.deleteTransaction(transaction)
-                                                    }
+                                        TransactionItem(
+                                            transaction = transaction,
+                                            language = lang,
+                                            isDragDateReorderEnabled = uiState.isDragDateReorderEnabled,
+                                            onStartDrag = {
+                                                draggingTransaction = transaction
+                                                dragOffset = Offset.Zero
+                                                hoveredDateKey = null
+                                                draggedItemRect = null
+                                            },
+                                            onDrag = { dragAmount ->
+                                                dragOffset += dragAmount
+                                                val startRect = draggedItemRect
+                                                if (startRect != null) {
+                                                    val currentTouchY = startRect.center.y + dragOffset.y
+                                                    hoveredDateKey = findClosestDateHeaderKey(currentTouchY, dateHeaderBoundsMap)
                                                 }
-                                            )
-                                        }
+                                            },
+                                            onEndDrag = {
+                                                if (draggingTransaction != null && hoveredDateKey != null) {
+                                                    val newDateMillis = parseDateKeyToMillis(hoveredDateKey!!, draggingTransaction!!.date)
+                                                    viewModel.moveTransactionToDate(draggingTransaction!!, newDateMillis)
+                                                }
+                                                draggingTransaction = null
+                                                dragOffset = Offset.Zero
+                                                hoveredDateKey = null
+                                                draggedItemRect = null
+                                            },
+                                            onEdit = { editingTransaction = transaction },
+                                            onDelete = {
+                                                if (uiState.isConfirmDeleteEnabled) {
+                                                    deletingTransaction = transaction
+                                                } else {
+                                                    viewModel.deleteTransaction(transaction)
+                                                }
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -1432,12 +1386,12 @@ fun DateHeaderItem(
     val backgroundColor = if (isHovered)
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
     else
-        MaterialTheme.colorScheme.surface
+        Color.Transparent
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 4.dp)
+            .padding(top = 16.dp, bottom = 4.dp)
             .onGloballyPositioned { coordinates ->
                 onBoundsMeasured(coordinates.boundsInWindow())
             },
@@ -1447,30 +1401,28 @@ fun DateHeaderItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
-            ) {
-                Text(
-                    text = group.displayDate,
-                    style = MaterialTheme.typography.labelLarge,
+            Text(
+                text = group.displayDate.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
+                    letterSpacing = 1.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             val sign = if (group.totalDailyExpense > 0) "-" else "+"
             val absAmount = abs(group.totalDailyExpense)
             Text(
-                text = "${AppStrings.get("daily_subtotal", language)}: $sign$${String.format(Locale.getDefault(), "%,.0f", absAmount)}",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (group.totalDailyExpense > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                text = "$sign$${String.format(Locale.getDefault(), "%,.0f", absAmount)}",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -1488,10 +1440,8 @@ fun TransactionItem(
     onDelete: () -> Unit
 ) {
     val isExpense = transaction.type == TransactionType.EXPENSE
-    val iconBgColor = if (isExpense) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-    val iconTintColor = if (isExpense) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
     val amountPrefix = if (isExpense) "-" else "+"
-    val amountColor = if (isExpense) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val amountColor = if (isExpense) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary
 
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     val timeStr = timeFormat.format(Date(transaction.date))
@@ -1514,100 +1464,105 @@ fun TransactionItem(
         Modifier.fillMaxWidth()
     }
 
-    Card(
-        modifier = modifierWithDrag,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    // Style A: Edge-to-edge Flat Row with subtle mist background icon & borderless elegance
+    Surface(
+        modifier = modifierWithDrag
+            .bouncyClickable { onEdit() },
+        color = Color.Transparent
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = iconBgColor,
-                    modifier = Modifier.size(44.dp)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = getCategoryIcon(transaction.category),
-                            contentDescription = transaction.category,
-                            tint = iconTintColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    val localizedCategory = AppStrings.getCategoryName(transaction.category, language)
-                    val localizedNote = transaction.note.split(" • ").joinToString(" • ") { part ->
-                        AppStrings.getSubCategoryName(part, language)
+                    // Minimalist frosted/mist icon container
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.size(46.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = getCategoryIcon(transaction.category),
+                                contentDescription = transaction.category,
+                                tint = if (isExpense) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        val localizedCategory = AppStrings.getCategoryName(transaction.category, language)
+                        val localizedNote = transaction.note.split(" • ").joinToString(" • ") { part ->
+                            AppStrings.getSubCategoryName(part, language)
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = localizedCategory,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.2.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        val noteSubtitle = if (localizedNote.isNotBlank()) "$localizedNote • $timeStr" else timeStr
                         Text(
-                            text = localizedCategory,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            text = noteSubtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    val noteSubtitle = if (localizedNote.isNotBlank()) "$localizedNote • $timeStr" else timeStr
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
-                        text = noteSubtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "$amountPrefix$${String.format(Locale.getDefault(), "%,.0f", transaction.amount)}",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 17.sp,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
+                        color = amountColor
                     )
+
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "刪除這筆紀錄",
+                            tint = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "$amountPrefix$${String.format(Locale.getDefault(), "%,.0f", transaction.amount)}",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp
-                    ),
-                    color = amountColor
-                )
-
-                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "修改這筆紀錄",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "刪除這筆紀錄",
-                        tint = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            // High-end subtle edge-to-edge separator line
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                thickness = 0.7.dp,
+                modifier = Modifier.padding(start = 60.dp)
+            )
         }
     }
 }
@@ -1626,301 +1581,216 @@ fun BudgetOverviewCard(
     onOpenMonthlyBreakdown: () -> Unit
 ) {
     val isZh = language == AppLanguage.ZH
-    val pagerState = rememberPagerState(pageCount = { 2 })
-
     val calendar = Calendar.getInstance()
     val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val remainingDays = (daysInMonth - currentDay + 1).coerceAtLeast(1)
 
     val dailyEstimatedUsable = if (remainingBudget > 0) (remainingBudget / remainingDays) else 0.0
-    val todayEstimatedRemaining = dailyEstimatedUsable - todayExpense
+    val progressClamped = progress.coerceIn(0f, 1f)
 
+    // Style A: Premium Linear / Apple Wallet Fintech Hero Asset Card
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .bouncyClickable { onOpenMonthlyBreakdown() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxWidth()
-            ) { page ->
-                when (page) {
-                    0 -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.AccountBalanceWallet,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = AppStrings.get("vault_overview", language),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainerHigh
-                                ) {
-                                    Text(
-                                        text = "${(progress * 100).toInt()}% 已用",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = AppStrings.get("spent_this_month", language),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(
-                                            text = "$${String.format(Locale.getDefault(), "%,.0f", totalExpense)}",
-                                            style = MaterialTheme.typography.headlineLarge.copy(
-                                                fontWeight = FontWeight.ExtraBold,
-                                                fontSize = 32.sp
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "TWD",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(bottom = 4.dp)
-                                        )
-                                    }
-                                }
-
-                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = AppStrings.get("remaining_vault", language),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    val remColor = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                                    Text(
-                                        text = "$${String.format(Locale.getDefault(), "%,.0f", remainingBudget)}",
-                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = remColor
-                                    )
-                                }
-                            }
-
-                            val barColor = when {
-                                isOverBudget -> MaterialTheme.colorScheme.error
-                                isNearLimit -> MaterialTheme.colorScheme.tertiary
-                                else -> MaterialTheme.colorScheme.primary
-                            }
-
-                            LinearProgressIndicator(
-                                progress = { progress.coerceIn(0f, 1f) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(10.dp)
-                                    .clip(CircleShape),
-                                color = barColor,
-                                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            // Top Bar: Vault Label + Live Indicator Pill
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                             )
+                    )
+                    Text(
+                        text = (if (isZh) "本月總資產動態" else "Monthly Asset Overview").uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (isOverBudget) "⚠️ 已超出預算限額" else "目標控管中",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Text(
-                                    text = "${AppStrings.get("target_budget", language)}: $${String.format(Locale.getDefault(), "%,.0f", totalBudget)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    1 -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Default.Today,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = if (isZh) "每日配額概況" else "Daily Budget Status",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainerHigh
-                                ) {
-                                    Text(
-                                        text = if (isZh) "剩餘 $remainingDays 天" else "$remainingDays days left",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = if (isZh) "今日已使用" else "Spent Today",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(
-                                            text = "$${String.format(Locale.getDefault(), "%,.0f", todayExpense)}",
-                                            style = MaterialTheme.typography.headlineLarge.copy(
-                                                fontWeight = FontWeight.ExtraBold,
-                                                fontSize = 32.sp
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "TWD",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(bottom = 4.dp)
-                                        )
-                                    }
-                                }
-
-                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(
-                                        text = if (isZh) "今日剩餘預估" else "Today's Remaining",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    val todayRemColor = if (todayEstimatedRemaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
-                                    Text(
-                                        text = "$${String.format(Locale.getDefault(), "%,.0f", todayEstimatedRemaining)}",
-                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = todayRemColor
-                                    )
-                                }
-                            }
-
-                            val todayProgress = if (dailyEstimatedUsable > 0) (todayExpense / dailyEstimatedUsable).toFloat().coerceIn(0f, 1f) else 0f
-                            val todayBarColor = if (todayExpense > dailyEstimatedUsable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
-
-                            LinearProgressIndicator(
-                                progress = { todayProgress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(10.dp)
-                                    .clip(CircleShape),
-                                color = todayBarColor,
-                                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (todayEstimatedRemaining < 0) "⚠️ 今日支出已超標" else "今日配額充裕",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (todayEstimatedRemaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Text(
-                                    text = if (isZh) "日均上限: $${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/天" else "Daily est: $${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/day",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shadowElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = if (isOverBudget) "超出預算" else "${(progressClamped * 100).toInt()}% 已用",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            ),
+                            color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(2) { index ->
-                    val color = if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    val width = if (pagerState.currentPage == index) 18.dp else 6.dp
+            // Big Headline Amount: Spent
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = if (isZh) "本月累積支出" else "Total Spent This Month",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "$",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    Text(
+                        text = String.format(Locale.getDefault(), "%,.0f", totalExpense),
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 44.sp,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "TWD",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+            }
+
+            // Smooth Fintech Progress Bar
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                ) {
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .height(6.dp)
-                            .width(width)
+                            .fillMaxWidth(progressClamped)
+                            .height(8.dp)
                             .clip(CircleShape)
-                            .background(color)
+                            .background(
+                                if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                            )
+                    )
+                }
+            }
+
+            // Clean Divider & Pure Split Layout (已花費 / 剩餘金庫 / 日均配額)
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                thickness = 1.dp
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Column 1: Remaining Vault
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = if (isZh) "剩餘金庫" else "Remaining Vault",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${String.format(Locale.getDefault(), "%,.0f", remainingBudget)}",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
+                        color = if (remainingBudget >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+
+                // Vertical separator line
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(28.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                )
+
+                // Column 2: Total Budget Limit
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = if (isZh) "預算目標" else "Budget Limit",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${String.format(Locale.getDefault(), "%,.0f", totalBudget)}",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                // Vertical separator line
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(28.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                )
+
+                // Column 3: Daily Available
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = if (isZh) "日均配額 ($remainingDays 天)" else "Daily ($remainingDays d)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/天",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
             }
