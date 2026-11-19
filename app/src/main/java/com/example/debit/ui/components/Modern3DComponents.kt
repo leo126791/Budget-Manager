@@ -295,7 +295,9 @@ fun Modern3DStatRow(
     ) {
         // Left Stat Card: Spent
         Card(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .bouncyClickable {},
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
@@ -315,7 +317,7 @@ fun Modern3DStatRow(
                     )
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.errorContainer,
                         modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -337,14 +339,16 @@ fun Modern3DStatRow(
                     text = if (isZh) "佔總預算 $spentPercent%" else "Spent $spentPercent%",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         // Right Stat Card: Remaining Left
         Card(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .bouncyClickable {},
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
@@ -364,7 +368,7 @@ fun Modern3DStatRow(
                     )
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.primaryContainer,
                         modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -386,7 +390,7 @@ fun Modern3DStatRow(
                     text = if (isZh) "剩餘日均可花 $${String.format(Locale.getDefault(), "%,.0f", dailyAvailable)}" else "Daily left $${String.format(Locale.getDefault(), "%,.0f", dailyAvailable)}",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -666,7 +670,7 @@ fun Modern3DTransactionItem(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = AppStrings.get("edit_item", language),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -675,7 +679,7 @@ fun Modern3DTransactionItem(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = AppStrings.get("delete_item", language),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
