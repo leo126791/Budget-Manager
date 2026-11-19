@@ -16,9 +16,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -760,214 +763,517 @@ fun DashboardScreen(
                 }
 
                 2 -> {
-                    // Tab 2: Planning (Subscriptions & Savings Goals)
+                    // Tab 2: Planning (Subscriptions & Savings Goals) - Taste Skill Redesign
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        item { Spacer(modifier = Modifier.height(4.dp)) }
+                        item { Spacer(modifier = Modifier.height(2.dp)) }
 
-                        // Subscriptions & Recurring Income/Expense Card
+                        // 1. Hero Monthly Fixed Cashflow Projection Card
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF121714)),
+                                border = BorderStroke(1.dp, Color(0xFF1F2923))
                             ) {
                                 Column(
                                     modifier = Modifier.padding(18.dp),
                                     verticalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
+                                    // Header: Title + Add Button
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = if (lang == AppLanguage.ZH) "固定收支與定期扣款" else "Recurring Income & Expenses",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold
+                                                text = if (lang == AppLanguage.ZH) "固定收支與定期扣款" else "Recurring Cash Flow",
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
                                             )
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Text(
-                                                    text = if (lang == AppLanguage.ZH)
-                                                        "固定收入: +$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly)}/月"
-                                                    else
-                                                        "Income: +$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly)}/mo",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF059669)
-                                                )
-                                                Text(
-                                                    text = if (lang == AppLanguage.ZH)
-                                                        "固定支出: -$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedExpenseMonthly)}/月"
-                                                    else
-                                                        "Expense: -$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedExpenseMonthly)}/mo",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = if (lang == AppLanguage.ZH) "自動掌握每月例行開銷、帳單與收入" else "Manage recurring bills & salary",
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
                                         }
 
-                                        FilledTonalButton(
-                                            onClick = { showAddSubscriptionDialog = true },
-                                            shape = RoundedCornerShape(12.dp)
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFF184E38),
+                                            border = BorderStroke(1.dp, Color(0xFF2DD4BF).copy(alpha = 0.35f)),
+                                            modifier = Modifier
+                                                .clickable { showAddSubscriptionDialog = true }
+                                                .padding(start = 8.dp)
                                         ) {
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "新增固定收支" else "Add Item",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp
-                                            )
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = if (lang == AppLanguage.ZH) "新增項目" else "Add Item",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White
+                                                )
+                                            }
                                         }
                                     }
 
-                                    if (uiState.subscriptions.isEmpty()) {
+                                    // Split Cashflow Metrics Row (Two Clean Cards)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        // Left: Fixed Income
                                         Surface(
+                                            modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                            modifier = Modifier.fillMaxWidth()
+                                            color = Color(0xFF15221B),
+                                            border = BorderStroke(1.dp, Color(0xFF1F3A2C))
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(20.dp),
-                                                contentAlignment = Alignment.Center
+                                            Column(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Text(
-                                                    text = if (lang == AppLanguage.ZH) "尚無固定收支或定期扣款項目" else "No recurring income or expenses",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    text = if (lang == AppLanguage.ZH) "💵 固定月收入" else "Income / mo",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF6EE7B7)
+                                                )
+                                                Text(
+                                                    text = "+$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly)}",
+                                                    fontSize = 20.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    color = Color(0xFF10B981)
                                                 )
                                             }
                                         }
-                                    } else {
-                                        uiState.subscriptions.forEach { sub ->
-                                            val isIncome = sub.type == TransactionType.INCOME
-                                            val timeFormatted = "%02d:%02d".format(sub.billingHour, sub.billingMinute)
 
-                                            val typeTag = if (isIncome) {
-                                                if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "收入 (每 ${sub.intervalDays} 天)" else "Income (Every ${sub.intervalDays} Days)")
-                                                else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "收入 (年發)" else "Annual Income")
-                                                else (if (lang == AppLanguage.ZH) "固定收入" else "Recurring Income")
-                                            } else {
-                                                if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "支出 (每 ${sub.intervalDays} 天)" else "Expense (Every ${sub.intervalDays} Days)")
-                                                else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "支出 (年繳)" else "Annual Expense")
-                                                else (if (lang == AppLanguage.ZH) "固定支出" else "Recurring Expense")
-                                            }
-
-                                            val dateDetailStr = if (sub.isCustomInterval) {
-                                                if (isIncome) {
-                                                    if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 入帳" else "Every ${sub.intervalDays} days at $timeFormatted"
-                                                } else {
-                                                    if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 扣款" else "Every ${sub.intervalDays} days at $timeFormatted"
-                                                }
-                                            } else if (sub.isAnnual) {
-                                                if (isIncome) {
-                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Annual income on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
-                                                } else {
-                                                    if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Annual billing on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
-                                                }
-                                            } else {
-                                                if (isIncome) {
-                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Monthly income on day ${sub.billingDay} at $timeFormatted"
-                                                } else {
-                                                    if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Monthly billing on day ${sub.billingDay} at $timeFormatted"
-                                                }
-                                            }
-
-                                            val amountText = if (sub.isCustomInterval) {
-                                                val monthlyAvg = sub.amount * (30.0 / sub.intervalDays.coerceAtLeast(1))
-                                                val prefix = if (isIncome) "+" else "-"
-                                                "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/次 (約 $prefix$${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
-                                            } else if (sub.isAnnual) {
-                                                val monthlyAvg = sub.amount / 12.0
-                                                val prefix = if (isIncome) "+" else "-"
-                                                "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年 (約 $prefix$${String.format(Locale.getDefault(), "%,.0f", monthlyAvg)}/月)"
-                                            } else {
-                                                val prefix = if (isIncome) "+" else "-"
-                                                "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/月"
-                                            }
-
-                                            val amountColor = if (isIncome) Color(0xFF059669) else MaterialTheme.colorScheme.primary
-
-                                            Surface(
-                                                shape = RoundedCornerShape(16.dp),
-                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                modifier = Modifier.fillMaxWidth()
+                                        // Right: Fixed Expense
+                                        Surface(
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(14.dp),
+                                            color = Color(0xFF26181B),
+                                            border = BorderStroke(1.dp, Color(0xFF3F2026))
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(16.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier.weight(1f),
-                                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                                    ) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Surface(
-                                                                shape = RoundedCornerShape(6.dp),
-                                                                color = if (isIncome) Color(0xFFD1FAE5) else (if (sub.isAnnual) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer)
-                                                            ) {
-                                                                Text(
-                                                                    text = typeTag,
-                                                                    style = MaterialTheme.typography.labelSmall,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    color = if (isIncome) Color(0xFF065F46) else (if (sub.isAnnual) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer),
-                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                                )
-                                                            }
-                                                            Spacer(modifier = Modifier.width(8.dp))
-                                                            Text(
-                                                                text = sub.name,
-                                                                style = MaterialTheme.typography.titleMedium,
-                                                                fontWeight = FontWeight.Bold
-                                                            )
-                                                        }
-                                                        Text(
-                                                            text = dateDetailStr,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                        Text(
-                                                            text = amountText,
-                                                            style = MaterialTheme.typography.titleMedium,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = amountColor
-                                                        )
-                                                    }
+                                                Text(
+                                                    text = if (lang == AppLanguage.ZH) "💸 固定月支出" else "Expense / mo",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFFFDA4AF)
+                                                )
+                                                Text(
+                                                    text = "-$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedExpenseMonthly)}",
+                                                    fontSize = 20.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    color = Color(0xFFFB7185)
+                                                )
+                                            }
+                                        }
+                                    }
 
-                                                    IconButton(
-                                                        onClick = {
-                                                            if (uiState.isConfirmDeleteEnabled) {
-                                                                deletingSubscription = sub
-                                                            } else {
-                                                                viewModel.deleteSubscription(sub)
-                                                            }
-                                                        },
-                                                        modifier = Modifier.size(36.dp)
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Delete,
-                                                            contentDescription = "刪除",
-                                                            tint = MaterialTheme.colorScheme.error,
-                                                            modifier = Modifier.size(20.dp)
-                                                        )
-                                                    }
-                                                }
+                                    // Net Projection Banner
+                                    val netFixedMonthly = uiState.totalFixedIncomeMonthly - uiState.totalFixedExpenseMonthly
+                                    val netSign = if (netFixedMonthly >= 0) "+" else ""
+                                    val netColor = if (netFixedMonthly >= 0) Color(0xFF10B981) else Color(0xFFFB7185)
+
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Color(0xFF18201C),
+                                        border = BorderStroke(1.dp, Color(0xFF233028)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = if (lang == AppLanguage.ZH) "預估每月固定淨結餘" else "Estimated Net Cash Flow",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                            Text(
+                                                text = "$netSign$${String.format(Locale.getDefault(), "%,.0f", netFixedMonthly)} /月",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = netColor
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Subscriptions & Recurring List Section
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (lang == AppLanguage.ZH) "定期扣款與固定收入項目 (${uiState.subscriptions.size})" else "Recurring Items (${uiState.subscriptions.size})",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFCBD5E1)
+                                )
+                            }
+                        }
+
+                        if (uiState.subscriptions.isEmpty()) {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFF121714),
+                                    border = BorderStroke(1.dp, Color(0xFF1F2923)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF162E22)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Repeat,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Text(
+                                            text = if (lang == AppLanguage.ZH) "尚無固定收支或定期扣款項目" else "No recurring cash flow items",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = if (lang == AppLanguage.ZH)
+                                                "設定房租、水電費、電信費、串流影音等例行性收支，系統將於指定扣款日自動掌握，精準計算每日剩餘可用額度。"
+                                            else
+                                                "Track recurring bills and salary to automatically forecast monthly disposable budget.",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF94A3B8),
+                                            lineHeight = 18.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        )
+                                        Spacer(modifier = Modifier.height(14.dp))
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFF184E38),
+                                            border = BorderStroke(1.dp, Color(0xFF2DD4BF).copy(alpha = 0.35f)),
+                                            modifier = Modifier.clickable { showAddSubscriptionDialog = true }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (lang == AppLanguage.ZH) "新增第一筆固定收支" else "Add First Item",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White
+                                                )
                                             }
                                         }
                                     }
                                 }
                             }
+                        } else {
+                            items(
+                                items = uiState.subscriptions,
+                                key = { it.id }
+                            ) { sub ->
+                                val isIncome = sub.type == TransactionType.INCOME
+                                val timeFormatted = "%02d:%02d".format(sub.billingHour, sub.billingMinute)
+
+                                val typeTag = if (isIncome) {
+                                    if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "收入 (每 ${sub.intervalDays} 天)" else "Income (Every ${sub.intervalDays} Days)")
+                                    else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "年收入" else "Annual Income")
+                                    else (if (lang == AppLanguage.ZH) "每月固定收入" else "Monthly Income")
+                                } else {
+                                    if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "支出 (每 ${sub.intervalDays} 天)" else "Expense (Every ${sub.intervalDays} Days)")
+                                    else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "年度扣款" else "Annual Expense")
+                                    else (if (lang == AppLanguage.ZH) "每月定期扣款" else "Monthly Bill")
+                                }
+
+                                val dateDetailStr = if (sub.isCustomInterval) {
+                                    if (isIncome) {
+                                        if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 入帳" else "Every ${sub.intervalDays} days at $timeFormatted"
+                                    } else {
+                                        if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 扣款" else "Every ${sub.intervalDays} days at $timeFormatted"
+                                    }
+                                } else if (sub.isAnnual) {
+                                    if (isIncome) {
+                                        if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Annual on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
+                                    } else {
+                                        if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Annual on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
+                                    }
+                                } else {
+                                    if (isIncome) {
+                                        if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Day ${sub.billingDay} at $timeFormatted"
+                                    } else {
+                                        if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Day ${sub.billingDay} at $timeFormatted"
+                                    }
+                                }
+
+                                val amountText = if (sub.isCustomInterval) {
+                                    val monthlyAvg = sub.amount * (30.0 / sub.intervalDays.coerceAtLeast(1))
+                                    val prefix = if (isIncome) "+" else "-"
+                                    "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/次"
+                                } else if (sub.isAnnual) {
+                                    val prefix = if (isIncome) "+" else "-"
+                                    "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年"
+                                } else {
+                                    val prefix = if (isIncome) "+" else "-"
+                                    "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/月"
+                                }
+
+                                val amountColor = if (isIncome) Color(0xFF10B981) else Color(0xFFFB7185)
+
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFF121714),
+                                    border = BorderStroke(1.dp, Color(0xFF1F2923)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Category icon
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isIncome) Color(0xFF162E22) else Color(0xFF26181B)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = getCategoryIcon(sub.category),
+                                                contentDescription = sub.name,
+                                                tint = if (isIncome) Color(0xFF10B981) else Color(0xFFFB7185),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = sub.name,
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = if (isIncome) Color(0xFF162E22) else Color(0xFF26181B)
+                                                ) {
+                                                    Text(
+                                                        text = typeTag,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isIncome) Color(0xFF6EE7B7) else Color(0xFFFDA4AF),
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Text(
+                                                text = dateDetailStr,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                        }
+
+                                        Column(
+                                            horizontalAlignment = Alignment.End,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = amountText,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = amountColor
+                                            )
+
+                                            IconButton(
+                                                onClick = {
+                                                    if (uiState.isConfirmDeleteEnabled) {
+                                                        deletingSubscription = sub
+                                                    } else {
+                                                        viewModel.deleteSubscription(sub)
+                                                    }
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "刪除",
+                                                    tint = Color(0xFF64748B),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Savings Vault & Discipline Card
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF121714)),
+                                border = BorderStroke(1.dp, Color(0xFF1F2923))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(18.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF162E22)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Savings,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = if (lang == AppLanguage.ZH) "小金庫儲蓄與目標規劃" else "Savings Vault Planning",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.Bottom
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = if (lang == AppLanguage.ZH) "本月剩餘可用金庫" else "Remaining Vault",
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                            Text(
+                                                text = "$${String.format(Locale.getDefault(), "%,.0f", uiState.remainingBudget)}",
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.Black,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = if (uiState.remainingBudget >= 0) Color(0xFF10B981) else Color(0xFFFB7185)
+                                            )
+                                        }
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = if (lang == AppLanguage.ZH) "金庫健康度" else "Vault Health",
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                            val healthPercent = ((1f - uiState.totalBudgetProgress) * 100).toInt().coerceIn(0, 100)
+                                            Text(
+                                                text = "$healthPercent%",
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF6EE7B7)
+                                            )
+                                        }
+                                    }
+
+                                    LinearProgressIndicator(
+                                        progress = { (1f - uiState.totalBudgetProgress).coerceIn(0f, 1f) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp)),
+                                        color = Color(0xFF10B981),
+                                        trackColor = Color(0xFF1F2923)
+                                    )
+
+                                    Text(
+                                        text = if (lang == AppLanguage.ZH)
+                                            "💡 維持規律的記帳與日均配額紀律，每日未花費的預算將自動滾入金庫，累積為可觀的財富自由基金。"
+                                        else
+                                            "💡 Daily unspent allowances roll into your monthly vault to build wealth over time.",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF64748B),
+                                        lineHeight = 16.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Bottom spacer for FAB
+                        item {
+                            Spacer(modifier = Modifier.height(96.dp))
                         }
                     }
                 }
