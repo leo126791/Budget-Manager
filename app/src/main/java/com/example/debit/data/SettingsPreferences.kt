@@ -5,20 +5,30 @@ import androidx.compose.ui.graphics.Color
 import java.util.UUID
 
 enum class AppThemeColor(val displayNameZh: String, val displayNameEn: String, val primaryColor: Color, val containerColor: Color) {
-    INDIGO("靛藍", "Indigo", Color(0xFF4F46E5), Color(0xFFEEF2FF)),
     EMERALD("翡翠綠", "Emerald", Color(0xFF1B4A31), Color(0xFFECFDF5)),
-    TEAL("藍色", "Blue", Color(0xFF0284C7), Color(0xFFE0F2FE)),
-    ROSE("紅色", "Red", Color(0xFFE11D48), Color(0xFFFFE4E6)),
-    SLATE("灰色", "Gray", Color(0xFF475569), Color(0xFFF1F5F9))
+    INDIGO("經典靛藍", "Indigo", Color(0xFF4F46E5), Color(0xFFEEF2FF)),
+    TEAL("海洋湛藍", "Teal", Color(0xFF0284C7), Color(0xFFE0F2FE)),
+    ROSE("浪漫玫瑰", "Rose", Color(0xFFE11D48), Color(0xFFFFE4E6)),
+    AMBER("活力琥珀", "Amber", Color(0xFFD97706), Color(0xFFFEF3C7)),
+    PURPLE("高雅薰衣", "Purple", Color(0xFF7C3AED), Color(0xFFF3E8FF)),
+    CYAN("清新薄荷", "Mint", Color(0xFF0D9488), Color(0xFFCCFBF1)),
+    CORAL("珊瑚暖橘", "Coral", Color(0xFFEA580C), Color(0xFFFFEDD5)),
+    SLATE("沈穩墨灰", "Slate", Color(0xFF475569), Color(0xFFF1F5F9)),
+    CUSTOM("自訂色彩", "Custom", Color(0xFF6366F1), Color(0xFFEEF2FF))
 }
 
 val AppThemeColor.primaryColorInt: Int
     get() = when (this) {
         AppThemeColor.INDIGO -> android.graphics.Color.parseColor("#4F46E5")
-        AppThemeColor.EMERALD -> android.graphics.Color.parseColor("#059669")
+        AppThemeColor.EMERALD -> android.graphics.Color.parseColor("#1B4A31")
         AppThemeColor.TEAL -> android.graphics.Color.parseColor("#0284C7")
         AppThemeColor.ROSE -> android.graphics.Color.parseColor("#E11D48")
+        AppThemeColor.AMBER -> android.graphics.Color.parseColor("#D97706")
+        AppThemeColor.PURPLE -> android.graphics.Color.parseColor("#7C3AED")
+        AppThemeColor.CYAN -> android.graphics.Color.parseColor("#0D9488")
+        AppThemeColor.CORAL -> android.graphics.Color.parseColor("#EA580C")
         AppThemeColor.SLATE -> android.graphics.Color.parseColor("#475569")
+        AppThemeColor.CUSTOM -> android.graphics.Color.parseColor("#6366F1")
     }
 
 val AppThemeColor.darkPrimaryColorInt: Int
@@ -27,7 +37,12 @@ val AppThemeColor.darkPrimaryColorInt: Int
         AppThemeColor.EMERALD -> android.graphics.Color.parseColor("#047857")
         AppThemeColor.TEAL -> android.graphics.Color.parseColor("#0369A1")
         AppThemeColor.ROSE -> android.graphics.Color.parseColor("#BE123C")
+        AppThemeColor.AMBER -> android.graphics.Color.parseColor("#B45309")
+        AppThemeColor.PURPLE -> android.graphics.Color.parseColor("#6D28D9")
+        AppThemeColor.CYAN -> android.graphics.Color.parseColor("#0F766E")
+        AppThemeColor.CORAL -> android.graphics.Color.parseColor("#C2410C")
         AppThemeColor.SLATE -> android.graphics.Color.parseColor("#334155")
+        AppThemeColor.CUSTOM -> android.graphics.Color.parseColor("#4F46E5")
     }
 
 val AppThemeColor.containerColorInt: Int
@@ -36,7 +51,12 @@ val AppThemeColor.containerColorInt: Int
         AppThemeColor.EMERALD -> android.graphics.Color.parseColor("#ECFDF5")
         AppThemeColor.TEAL -> android.graphics.Color.parseColor("#E0F2FE")
         AppThemeColor.ROSE -> android.graphics.Color.parseColor("#FFE4E6")
+        AppThemeColor.AMBER -> android.graphics.Color.parseColor("#FEF3C7")
+        AppThemeColor.PURPLE -> android.graphics.Color.parseColor("#F3E8FF")
+        AppThemeColor.CYAN -> android.graphics.Color.parseColor("#CCFBF1")
+        AppThemeColor.CORAL -> android.graphics.Color.parseColor("#FFEDD5")
         AppThemeColor.SLATE -> android.graphics.Color.parseColor("#F1F5F9")
+        AppThemeColor.CUSTOM -> android.graphics.Color.parseColor("#EEF2FF")
     }
 
 enum class AppLanguage(val code: String, val displayName: String) {
@@ -87,6 +107,12 @@ class SettingsPreferences(context: Context) {
     fun setBetaTestingEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("beta_testing", enabled).apply()
     }
+
+    fun isThemePaletteEnabled(): Boolean = prefs.getBoolean("theme_palette_beta", false)
+    fun setThemePaletteEnabled(enabled: Boolean) = prefs.edit().putBoolean("theme_palette_beta", enabled).apply()
+
+    fun getCustomColorHex(): String? = prefs.getString("custom_color_hex", null)
+    fun setCustomColorHex(hex: String?) = prefs.edit().putString("custom_color_hex", hex).apply()
 
     fun isIncomeTrackingEnabled(): Boolean = prefs.getBoolean("income_tracking", true)
     fun setIncomeTrackingEnabled(enabled: Boolean) = prefs.edit().putBoolean("income_tracking", enabled).apply()

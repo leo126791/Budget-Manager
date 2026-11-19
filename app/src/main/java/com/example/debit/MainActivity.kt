@@ -48,7 +48,24 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsState()
             val isInitialized by viewModel.isInitialized.collectAsState()
 
-            DebitTheme(darkTheme = uiState.isDarkMode, themeColor = AppThemeColor.EMERALD) {
+            val activeThemeColor = if (uiState.isThemePaletteEnabled && !uiState.customColorHex.isNullOrBlank()) {
+                AppThemeColor.CUSTOM
+            } else if (uiState.isThemePaletteEnabled) {
+                uiState.themeColor
+            } else {
+                AppThemeColor.EMERALD
+            }
+            val activeCustomColorHex = if (uiState.isThemePaletteEnabled) {
+                uiState.customColorHex
+            } else {
+                null
+            }
+
+            DebitTheme(
+                darkTheme = uiState.isDarkMode,
+                themeColor = activeThemeColor,
+                customColorHex = activeCustomColorHex
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

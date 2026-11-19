@@ -23,6 +23,8 @@ fun SettingsDialog(
     currentDragDateReorderEnabled: Boolean = true,
     currentAutoBackupEnabled: Boolean = true,
     lastAutoBackupTime: Long,
+    currentThemePaletteEnabled: Boolean = false,
+    currentCustomColorHex: String? = null,
     onDailyReminderMasterChange: (Boolean) -> Unit = {},
     onAddReminderTime: (Int, Int) -> Unit = { _, _ -> },
     onDeleteReminderTime: (ReminderTime) -> Unit = {},
@@ -39,7 +41,9 @@ fun SettingsDialog(
         multiAccountEnabled: Boolean,
         modern3DUiEnabled: Boolean,
         dragDateReorderEnabled: Boolean,
-        autoBackupEnabled: Boolean
+        autoBackupEnabled: Boolean,
+        themePaletteEnabled: Boolean,
+        customColorHex: String?
     ) -> Unit,
     onExportReport: () -> Unit,
     onBackupToGoogleDrive: () -> Unit,
@@ -49,6 +53,8 @@ fun SettingsDialog(
     SettingsScreen(
         initialTotalBudget = initialTotalBudget,
         currentThemeColor = currentThemeColor,
+        currentThemePaletteEnabled = currentThemePaletteEnabled,
+        currentCustomColorHex = currentCustomColorHex,
         currentLanguage = currentLanguage,
         currentBetaTestingEnabled = currentBetaTestingEnabled,
         currentGooglePayListenerEnabled = currentGooglePayListenerEnabled,

@@ -129,9 +129,9 @@ fun HelpDialog(
                     icon = Icons.Default.Science,
                     title = if (isZh) "BETA 實驗性功能" else "Beta Features",
                     description = if (isZh)
-                        "可開啟額外進階工具，包括收入記帳、關鍵字搜尋、週期訂閱管理與多帳戶金流支援。"
+                        "可開啟額外進階工具，包括主題調色盤（自由挑選或自訂全 App 主題配色）、收入記帳、關鍵字搜尋與支付方式分類。"
                     else
-                        "Optional advanced tools including income tracking, search, subscriptions, and multi-account."
+                        "Optional advanced tools including Theme Palette (custom app accent colors), income tracking, search, and payment methods."
                 )
             }
         },

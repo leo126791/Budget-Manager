@@ -13,6 +13,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -53,8 +54,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Delete
 import com.example.debit.data.ReminderTime
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
+import com.example.debit.ui.dialogs.CustomColorPickerDialog
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FileDownload
@@ -105,6 +108,7 @@ import android.widget.Toast
 import com.example.debit.service.PaymentNotificationListenerService
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.AppThemeColor
+import com.example.debit.data.primaryColorInt
 import com.example.debit.data.SettingsPreferences
 import com.example.debit.receiver.DailyReminderReceiver
 import com.example.debit.ui.utils.AppStrings
@@ -133,6 +137,8 @@ fun SettingsScreen(
     currentDragDateReorderEnabled: Boolean = true,
     currentAutoBackupEnabled: Boolean = true,
     lastAutoBackupTime: Long,
+    currentThemePaletteEnabled: Boolean = false,
+    currentCustomColorHex: String? = null,
     isEmbedded: Boolean = false,
     onDailyReminderMasterChange: (Boolean) -> Unit = {},
     onAddReminderTime: (Int, Int) -> Unit = { _, _ -> },
@@ -152,7 +158,9 @@ fun SettingsScreen(
         multiAccountEnabled: Boolean,
         modern3DUiEnabled: Boolean,
         dragDateReorderEnabled: Boolean,
-        autoBackupEnabled: Boolean
+        autoBackupEnabled: Boolean,
+        themePaletteEnabled: Boolean,
+        customColorHex: String?
     ) -> Unit,
     onExportReport: () -> Unit,
     onBackupToGoogleDrive: () -> Unit,
@@ -171,7 +179,7 @@ fun SettingsScreen(
     var budgetInput by remember {
         mutableStateOf(if (initialTotalBudget > 0) initialTotalBudget.toInt().toString() else "")
     }
-    var selectedColor by remember { mutableStateOf(currentThemeColor) }
+    var selectedColor by remember(currentThemeColor) { mutableStateOf(currentThemeColor) }
     var selectedLanguage by remember { mutableStateOf(currentLanguage) }
     var betaTestingState by remember(currentBetaTestingEnabled) { mutableStateOf(currentBetaTestingEnabled) }
     var googlePayListenerState by remember(currentGooglePayListenerEnabled) { mutableStateOf(currentGooglePayListenerEnabled) }
@@ -185,6 +193,8 @@ fun SettingsScreen(
     var dragDateReorderState by remember { mutableStateOf(currentDragDateReorderEnabled) }
     var autoBackupState by remember { mutableStateOf(currentAutoBackupEnabled) }
     var isDarkModeState by remember(currentDarkMode) { mutableStateOf(currentDarkMode) }
+    var themePaletteState by remember(currentThemePaletteEnabled) { mutableStateOf(currentThemePaletteEnabled) }
+    var customColorHexState by remember(currentCustomColorHex) { mutableStateOf(currentCustomColorHex) }
 
     val isZh = selectedLanguage == AppLanguage.ZH
 
@@ -222,7 +232,9 @@ fun SettingsScreen(
         multiAcc: Boolean = multiAccountState,
         m3d: Boolean = modern3DUiState,
         dragDate: Boolean = dragDateReorderState,
-        autoBackup: Boolean = autoBackupState
+        autoBackup: Boolean = autoBackupState,
+        themePalette: Boolean = themePaletteState,
+        customColor: String? = customColorHexState
     ) {
         val limit = budget.toDoubleOrNull() ?: 0.0
         onSaveSettings(
@@ -237,7 +249,9 @@ fun SettingsScreen(
             multiAcc,
             m3d,
             dragDate,
-            autoBackup
+            autoBackup,
+            themePalette,
+            customColor
         )
     }
 
@@ -269,6 +283,26 @@ fun SettingsScreen(
                 betaTestingState = newBeta
                 triggerAutoSave(
                     beta = newBeta
+                )
+            },
+            themePaletteState = themePaletteState,
+            onThemePaletteChange = { newPalette ->
+                themePaletteState = newPalette
+                triggerAutoSave(themePalette = newPalette)
+            },
+            customColorHexState = customColorHexState,
+            onCustomColorHexChange = { newHex ->
+                customColorHexState = newHex
+                triggerAutoSave(customColor = newHex)
+            },
+            onApplyThemeColor = { newColor, newHex ->
+                selectedColor = newColor
+                customColorHexState = newHex
+                themePaletteState = true
+                triggerAutoSave(
+                    color = newColor,
+                    customColor = newHex,
+                    themePalette = true
                 )
             },
             googlePayListenerState = googlePayListenerState,
@@ -362,15 +396,15 @@ fun SettingsScreen(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFFEF3C7),
+                                color = MaterialTheme.colorScheme.primaryContainer,
                                 modifier = Modifier.size(38.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_piggy_bank),
-                                        contentDescription = "Piggy",
-                                        tint = Color(0xFFD97706),
-                                        modifier = Modifier.size(24.dp)
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Settings",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -426,6 +460,11 @@ private fun SettingsBodyList(
     onLanguageSelect: (AppLanguage) -> Unit,
     betaTestingState: Boolean,
     onBetaTestingChange: (Boolean) -> Unit,
+    themePaletteState: Boolean = false,
+    onThemePaletteChange: (Boolean) -> Unit = {},
+    customColorHexState: String? = null,
+    onCustomColorHexChange: (String) -> Unit = {},
+    onApplyThemeColor: (AppThemeColor, String?) -> Unit = { _, _ -> },
     googlePayListenerState: Boolean,
     onGooglePayListenerChange: (Boolean) -> Unit,
     confirmDeleteState: Boolean,
@@ -456,6 +495,19 @@ private fun SettingsBodyList(
     val isZh = selectedLanguage == AppLanguage.ZH
     var showBudgetDialog by remember { mutableStateOf(false) }
     var tempBudgetInput by remember { mutableStateOf(budgetInput) }
+    var showCustomColorDialog by remember { mutableStateOf(false) }
+
+    if (showCustomColorDialog) {
+        CustomColorPickerDialog(
+            language = selectedLanguage,
+            initialColorHex = if (themePaletteState) customColorHexState else "#1B4A31",
+            onDismissRequest = { showCustomColorDialog = false },
+            onConfirmColor = { hex ->
+                onApplyThemeColor(AppThemeColor.CUSTOM, hex)
+                showCustomColorDialog = false
+            }
+        )
+    }
 
     // Dialog for Target Budget
     if (showBudgetDialog) {
@@ -536,14 +588,14 @@ private fun SettingsBodyList(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isDarkMode) Color(0xFF132B20) else Color(0xFFECFDF5),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                 modifier = Modifier.size(38.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_piggy_bank),
                                         contentDescription = null,
-                                        tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF1B4A31),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -564,13 +616,13 @@ private fun SettingsBodyList(
                             val displayAmount = budgetInput.toDoubleOrNull() ?: 0.0
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = if (isDarkMode) Color(0xFF143525) else Color(0xFFECFDF5)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             ) {
                                 Text(
                                     text = "$${String.format(Locale.getDefault(), "%,.0f", displayAmount)} TWD",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isDarkMode) Color(0xFFA7F3D0) else Color(0xFF1B4A31),
+                                    color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
@@ -626,7 +678,7 @@ private fun SettingsBodyList(
                             onCheckedChange = { /* Always enabled as core feature */ },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF1B4A31)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -674,7 +726,7 @@ private fun SettingsBodyList(
                             onCheckedChange = onGooglePayListenerChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -722,7 +774,7 @@ private fun SettingsBodyList(
                             onCheckedChange = onDailyReminderMasterChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -772,7 +824,7 @@ private fun SettingsBodyList(
                                                     onCheckedChange = { onToggleReminderTime(reminder, it) },
                                                     colors = SwitchDefaults.colors(
                                                         checkedThumbColor = Color.White,
-                                                        checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                                                        checkedTrackColor = MaterialTheme.colorScheme.primary
                                                     )
                                                 )
                                                 IconButton(
@@ -906,14 +958,91 @@ private fun SettingsBodyList(
                             onCheckedChange = { onDarkModeChange(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF1B4A31)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                    // Item 2: 系統語言
+                    // Item 2: 主題調色盤 (色輪選色)
+                    val currentAccentColor = MaterialTheme.colorScheme.primary
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCustomColorDialog = true }
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = currentAccentColor.copy(alpha = 0.15f),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Palette,
+                                        contentDescription = null,
+                                        tint = currentAccentColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = if (isZh) "主題調色盤" else "Theme Color Palette",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = if (isDarkMode) Color(0xFF142B20) else Color(0xFFD1FAE5)
+                                ) {
+                                    Text(
+                                        text = "BETA",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDarkMode) Color(0xFF86EFAC) else Color(0xFF047857),
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(currentAccentColor)
+                                    .border(1.5.dp, Color.White, CircleShape)
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    // Item 3: 系統語言
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -991,14 +1120,14 @@ private fun SettingsBodyList(
                 )
                 Surface(
                     shape = CircleShape,
-                    color = if (isDarkMode) Color(0xFF142B20) else Color(0xFFD1FAE5)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = if (isZh) "實驗性實驗室" else "Experimental Lab",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDarkMode) Color(0xFF86EFAC) else Color(0xFF047857),
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                     )
                 }
@@ -1014,7 +1143,7 @@ private fun SettingsBodyList(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(if (isDarkMode) Color.Transparent else Color(0xFFF0FDF4))
+                            .background(if (isDarkMode) Color.Transparent else MaterialTheme.colorScheme.primary.copy(alpha = 0.05f))
                             .padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -1026,14 +1155,14 @@ private fun SettingsBodyList(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isDarkMode) Color(0xFF132B20) else Color(0xFFDCFCE7),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                 modifier = Modifier.size(38.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Default.Science,
                                         contentDescription = null,
-                                        tint = if (isDarkMode) Color(0xFF34D399) else Color(0xFF166534),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -1050,14 +1179,14 @@ private fun SettingsBodyList(
                                     )
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = if (isDarkMode) Color(0xFF1B3D2B) else Color(0xFF1B4A31)
+                                        color = MaterialTheme.colorScheme.primary
                                     ) {
                                         Text(
                                             text = "BETA",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isDarkMode) Color(0xFFA7F3D0) else Color.White,
+                                            color = MaterialTheme.colorScheme.onPrimary,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                         )
                                     }
@@ -1070,7 +1199,7 @@ private fun SettingsBodyList(
                             onCheckedChange = onBetaTestingChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -1124,7 +1253,7 @@ private fun SettingsBodyList(
                                     onCheckedChange = onIncomeTrackingChange,
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color(0xFF1B4A31)
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
                             }
@@ -1172,7 +1301,7 @@ private fun SettingsBodyList(
                                     onCheckedChange = onSearchChange,
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color(0xFF1B4A31)
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
                             }
@@ -1220,7 +1349,7 @@ private fun SettingsBodyList(
                                     onCheckedChange = onMultiAccountChange,
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color(0xFF1B4A31)
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
                             }
@@ -1268,9 +1397,104 @@ private fun SettingsBodyList(
                                     onCheckedChange = onDragDateReorderChange,
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color(0xFF1B4A31)
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                            // Feature 5: 主題調色盤 (風格配色)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (isDarkMode) Color(0xFF1E293B) else Color(0xFFEFF6FF),
+                                            modifier = Modifier.size(38.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Palette,
+                                                    contentDescription = null,
+                                                    tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF2563EB),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = if (isZh) "主題調色盤" else "Theme Color Palette",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    Switch(
+                                        checked = themePaletteState,
+                                        onCheckedChange = onThemePaletteChange,
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = themePaletteState,
+                                    enter = expandVertically() + fadeIn(),
+                                    exit = shrinkVertically() + fadeOut()
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 10.dp)
+                                            .clickable { showCustomColorDialog = true }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.primary)
+                                                        .border(1.5.dp, Color.White, CircleShape)
+                                                )
+                                                Text(
+                                                    text = if (isZh) "開啟色輪調色盤" else "Open Color Wheel",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.ChevronRight,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1335,7 +1559,7 @@ private fun SettingsBodyList(
                             onCheckedChange = onAutoBackupChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = if (isDarkMode) Color(0xFF2E6B47) else Color(0xFF1B4A31)
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -1493,13 +1717,13 @@ private fun SettingsBodyList(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = "Budget Manager v1.2.0",
+                text = "Budget Manager v1.2.1",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = if (isZh) "版本 1.2.0・記帳與預算管家" else "Version 1.2.0 • Budget Manager",
+                text = if (isZh) "版本 1.2.1・記帳與預算管家" else "Version 1.2.1 • Budget Manager",
                 style = MaterialTheme.typography.bodySmall,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.outline

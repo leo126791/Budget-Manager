@@ -79,6 +79,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -305,15 +306,15 @@ fun DashboardScreen(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFFEF3C7),
+                                color = MaterialTheme.colorScheme.primaryContainer,
                                 modifier = Modifier.size(38.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_piggy_bank),
-                                        contentDescription = "Piggy",
-                                        tint = Color(0xFFD97706),
-                                        modifier = Modifier.size(24.dp)
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Settings",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -403,6 +404,13 @@ fun DashboardScreen(
             }
         },
         bottomBar = {
+            val navItemColors = NavigationBarItemDefaults.colors(
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 6.dp
@@ -411,49 +419,55 @@ fun DashboardScreen(
                     selected = selectedBottomNavIndex == 0,
                     onClick = { selectedBottomNavIndex = 0 },
                     icon = { Icon(Icons.Default.Home, contentDescription = if (isZh) "概覽" else "Overview") },
-                    label = { Text(if (isZh) "概覽" else "Overview", fontWeight = FontWeight.Bold) }
+                    label = { Text(if (isZh) "概覽" else "Overview", fontWeight = FontWeight.Bold) },
+                    colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedBottomNavIndex == 1,
                     onClick = { selectedBottomNavIndex = 1 },
                     icon = { Icon(Icons.Default.PieChart, contentDescription = if (isZh) "統計" else "Analytics") },
-                    label = { Text(if (isZh) "統計" else "Analytics", fontWeight = FontWeight.Bold) }
+                    label = { Text(if (isZh) "統計" else "Analytics", fontWeight = FontWeight.Bold) },
+                    colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedBottomNavIndex == 2,
                     onClick = { selectedBottomNavIndex = 2 },
                     icon = { Icon(Icons.Default.Savings, contentDescription = if (isZh) "規劃" else "Planning") },
-                    label = { Text(if (isZh) "規劃" else "Planning", fontWeight = FontWeight.Bold) }
+                    label = { Text(if (isZh) "規劃" else "Planning", fontWeight = FontWeight.Bold) },
+                    colors = navItemColors
                 )
                 NavigationBarItem(
                     selected = selectedBottomNavIndex == 3,
                     onClick = { selectedBottomNavIndex = 3 },
                     icon = { Icon(Icons.Default.Settings, contentDescription = if (isZh) "設定" else "Settings") },
-                    label = { Text(if (isZh) "設定" else "Settings", fontWeight = FontWeight.Bold) }
+                    label = { Text(if (isZh) "設定" else "Settings", fontWeight = FontWeight.Bold) },
+                    colors = navItemColors
                 )
             }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = if (isZh) "記一筆" else "Add Record",
-                        tint = Color.White
-                    )
-                },
-                text = {
-                    Text(
-                        text = if (isZh) "記一筆" else "Add",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                },
-                shape = RoundedCornerShape(28.dp),
-                containerColor = Color(0xFF1B4A31),
-                contentColor = Color.White
-            )
+            if (selectedBottomNavIndex != 3) {
+                ExtendedFloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = if (isZh) "記一筆" else "Add Record",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = if (isZh) "記一筆" else "Add",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    },
+                    shape = RoundedCornerShape(28.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     ) { innerPadding ->
         AnimatedContent(
@@ -1009,6 +1023,8 @@ fun DashboardScreen(
                     SettingsScreen(
                         initialTotalBudget = uiState.totalBudgetLimit,
                         currentThemeColor = uiState.themeColor,
+                        currentThemePaletteEnabled = uiState.isThemePaletteEnabled,
+                        currentCustomColorHex = uiState.customColorHex,
                         currentDarkMode = uiState.isDarkMode,
                         currentLanguage = uiState.appLanguage,
                         currentBetaTestingEnabled = uiState.isBetaTestingEnabled,
@@ -1043,10 +1059,22 @@ fun DashboardScreen(
                         onDarkModeChange = { dark ->
                             viewModel.setDarkMode(dark)
                         },
-                        onSaveSettings = { budgetLimit, color, language, betaTesting, gPay, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup ->
+                        onSaveSettings = { budgetLimit, color, language, betaTesting, gPay, incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup, themePalette, customColor ->
                             viewModel.saveSettings(
-                                budgetLimit, color, language, betaTesting, gPay,
-                                incomeTracking, search, subscription, multiAccount, modern3D, dragDateReorder, autoBackup
+                                budgetLimit = budgetLimit,
+                                color = color,
+                                language = language,
+                                betaTestingEnabled = betaTesting,
+                                googlePayListenerEnabled = gPay,
+                                incomeTrackingEnabled = incomeTracking,
+                                searchEnabled = search,
+                                subscriptionEnabled = subscription,
+                                multiAccountEnabled = multiAccount,
+                                modern3DUiEnabled = modern3D,
+                                dragDateReorderEnabled = dragDateReorder,
+                                autoBackupEnabled = autoBackup,
+                                themePaletteEnabled = themePalette,
+                                customColorHex = customColor
                             )
                         },
                         onExportReport = {

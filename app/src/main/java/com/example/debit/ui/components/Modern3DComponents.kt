@@ -109,9 +109,9 @@ fun Modern3DSavingsHeroCard(
             .background(
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF346247),
-                        Color(0xFF1B4A31),
-                        Color(0xFF142C1E)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                 )
             )
@@ -128,13 +128,13 @@ fun Modern3DSavingsHeroCard(
                 Text(
                     text = if (isZh) "預估本月儲蓄 Estimated Savings" else "Estimated Savings",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF34D399)
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF34D399).copy(alpha = 0.2f),
-                    border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.3f))
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -145,14 +145,14 @@ fun Modern3DSavingsHeroCard(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF34D399))
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                         Text(
                             text = if (isZh) "自動計算中" else "Live Sync",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF34D399)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -174,7 +174,7 @@ fun Modern3DSavingsHeroCard(
                 Text(
                     text = "TWD",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF34D399).copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
             }
@@ -188,12 +188,12 @@ fun Modern3DSavingsHeroCard(
                     Text(
                         text = if (isZh) "儲蓄容量進度" else "Savings Capacity",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFD1FAE5).copy(alpha = 0.9f)
+                        color = Color.White.copy(alpha = 0.85f)
                     )
                     Text(
                         text = if (isZh) "剩餘 $remainingProgressPercent%" else "Left $remainingProgressPercent%",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFF6EE7B7)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -212,7 +212,7 @@ fun Modern3DSavingsHeroCard(
                             .clip(CircleShape)
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(Color(0xFF10B981), Color(0xFF34D399))
+                                    listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                                 )
                             )
                     )

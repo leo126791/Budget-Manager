@@ -67,7 +67,9 @@ private data class Tuple4(
     val lastBackup: Long,
     val init: Boolean,
     val confirmDelete: Boolean,
-    val isDark: Boolean
+    val isDark: Boolean,
+    val themePalette: Boolean,
+    val customHex: String?
 )
 
 private data class PrefsTuple(
@@ -89,7 +91,9 @@ private data class PrefsTuple(
     val lastBackupTime: Long,
     val initialized: Boolean,
     val confirmDeleteOn: Boolean,
-    val isDarkMode: Boolean
+    val isDarkMode: Boolean,
+    val themePaletteEnabled: Boolean,
+    val customColorHex: String?
 )
 
 data class DebitUiState(
@@ -114,6 +118,8 @@ data class DebitUiState(
     val totalFixedIncomeMonthly: Double = 0.0,
     val totalFixedExpenseMonthly: Double = 0.0,
     val isBetaTestingEnabled: Boolean = false,
+    val isThemePaletteEnabled: Boolean = false,
+    val customColorHex: String? = null,
     val isGooglePayListenerEnabled: Boolean = false,
     val isDailyReminderEnabled: Boolean = false,
     val reminderTimes: List<ReminderTime> = emptyList(),
@@ -196,6 +202,12 @@ class DebitViewModel(
 
     private val _isDarkMode = MutableStateFlow(settingsPrefs.isDarkMode())
     val isDarkMode: StateFlow<Boolean> = _isDarkMode
+
+    private val _themePaletteEnabled = MutableStateFlow(settingsPrefs.isThemePaletteEnabled())
+    val themePaletteEnabled: StateFlow<Boolean> = _themePaletteEnabled
+
+    private val _customColorHex = MutableStateFlow(settingsPrefs.getCustomColorHex())
+    val customColorHex: StateFlow<String?> = _customColorHex
 
     init {
         viewModelScope.launch {
@@ -287,8 +299,10 @@ class DebitViewModel(
         Tuple3(sub, multi, m3d, dragDate, autoBackup)
     }
 
-    private val flow4 = combine(_lastAutoBackupTime, _isInitialized, _confirmDeleteEnabled, _isDarkMode) { lastBackup, init, confirmDelete, isDark ->
-        Tuple4(lastBackup, init, confirmDelete, isDark)
+    private val flowPalette = combine(_themePaletteEnabled, _customColorHex) { p, c -> p to c }
+
+    private val flow4 = combine(_lastAutoBackupTime, _isInitialized, _confirmDeleteEnabled, _isDarkMode, flowPalette) { lastBackup, init, confirmDelete, isDark, paletteInfo ->
+        Tuple4(lastBackup, init, confirmDelete, isDark, paletteInfo.first, paletteInfo.second)
     }
 
     private val settingsTupleFlow = combine(flow1, flow2, flow3, flow4) { t1, t2, t3, t4 ->
@@ -311,7 +325,9 @@ class DebitViewModel(
             lastBackupTime = t4.lastBackup,
             initialized = t4.init,
             confirmDeleteOn = t4.confirmDelete,
-            isDarkMode = t4.isDark
+            isDarkMode = t4.isDark,
+            themePaletteEnabled = t4.themePalette,
+            customColorHex = t4.customHex
         )
     }
 
@@ -342,6 +358,8 @@ class DebitViewModel(
         val multiAccountEnabled = betaEnabled && prefsTuple.multiAccountEnabled
         val modern3DUiEnabled = betaEnabled && prefsTuple.modern3DUiEnabled
         val dragDateReorderEnabled = betaEnabled && prefsTuple.dragDateReorderEnabled
+        val themePaletteEnabled = prefsTuple.themePaletteEnabled
+        val customColorHex = prefsTuple.customColorHex
 
         val autoBackupOn = prefsTuple.autoBackupOn
         val lastBackupTime = prefsTuple.lastBackupTime
@@ -426,6 +444,8 @@ class DebitViewModel(
             totalFixedIncomeMonthly = monthlyFixedIncome,
             totalFixedExpenseMonthly = monthlyFixedExpense,
             isBetaTestingEnabled = betaEnabled,
+            isThemePaletteEnabled = themePaletteEnabled,
+            customColorHex = customColorHex,
             isGooglePayListenerEnabled = googlePayEnabled,
             isDailyReminderEnabled = _dailyReminderEnabled.value,
             reminderTimes = _reminderTimes.value,
@@ -449,6 +469,8 @@ class DebitViewModel(
             isDarkMode = settingsPrefs.isDarkMode(),
             appLanguage = settingsPrefs.getLanguage(),
             isBetaTestingEnabled = settingsPrefs.isBetaTestingEnabled(),
+            isThemePaletteEnabled = settingsPrefs.isBetaTestingEnabled() && settingsPrefs.isThemePaletteEnabled(),
+            customColorHex = settingsPrefs.getCustomColorHex(),
             isGooglePayListenerEnabled = settingsPrefs.isGooglePayListenerEnabled(),
             isDailyReminderEnabled = settingsPrefs.isDailyReminderEnabled(),
             reminderTimes = settingsPrefs.getReminderTimes(),
@@ -645,7 +667,9 @@ class DebitViewModel(
         modern3DUiEnabled: Boolean = true,
         dragDateReorderEnabled: Boolean = true,
         autoBackupEnabled: Boolean = true,
-        isDarkMode: Boolean = _isDarkMode.value
+        isDarkMode: Boolean = _isDarkMode.value,
+        themePaletteEnabled: Boolean = _themePaletteEnabled.value,
+        customColorHex: String? = _customColorHex.value
     ) {
         viewModelScope.launch {
             val effIncome = betaTestingEnabled && incomeTrackingEnabled
@@ -654,6 +678,7 @@ class DebitViewModel(
             val effMultiAcc = betaTestingEnabled && multiAccountEnabled
             val effModern3D = betaTestingEnabled && modern3DUiEnabled
             val effDragDate = betaTestingEnabled && dragDateReorderEnabled
+            val effThemePalette = themePaletteEnabled
 
             settingsPrefs.setThemeColor(color)
             settingsPrefs.setLanguage(language)
@@ -667,6 +692,8 @@ class DebitViewModel(
             settingsPrefs.setDragDateReorderEnabled(effDragDate)
             settingsPrefs.setAutoBackupEnabled(autoBackupEnabled)
             settingsPrefs.setDarkMode(isDarkMode)
+            settingsPrefs.setThemePaletteEnabled(effThemePalette)
+            settingsPrefs.setCustomColorHex(customColorHex)
 
             _themeColor.value = color
             _appLanguage.value = language
@@ -680,6 +707,8 @@ class DebitViewModel(
             _dragDateReorderEnabled.value = effDragDate
             _autoBackupEnabled.value = autoBackupEnabled
             _isDarkMode.value = isDarkMode
+            _themePaletteEnabled.value = effThemePalette
+            _customColorHex.value = customColorHex
 
             repository.setBudget(
                 Budget(
@@ -861,6 +890,21 @@ class DebitViewModel(
         viewModelScope.launch {
             settingsPrefs.setBetaTestingEnabled(enabled)
             _betaTestingEnabled.value = enabled
+        }
+    }
+
+    fun setThemePaletteEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            val eff = _betaTestingEnabled.value && enabled
+            settingsPrefs.setThemePaletteEnabled(eff)
+            _themePaletteEnabled.value = eff
+        }
+    }
+
+    fun setCustomColorHex(hex: String?) {
+        viewModelScope.launch {
+            settingsPrefs.setCustomColorHex(hex)
+            _customColorHex.value = hex
         }
     }
 
