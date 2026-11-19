@@ -226,13 +226,6 @@ fun AddTransactionDialog(
         else String.format(Locale.US, "%.2f", calculatedAmount)
     }
 
-    // Quick tags for currently selected category
-    val defaultSubs = defaultSubCategoriesMap[category] ?: listOf("日常", "個人")
-    val currentSubs = remember(category, customSubVersion) {
-        val custom = onGetCustomSubCategories(category)
-        (defaultSubs + custom).distinct()
-    }
-
     // Date formatting: "今天 MM/dd" or "yyyy/MM/dd"
     val dateDisplay = remember(selectedDateMillis) {
         val now = Calendar.getInstance()
@@ -318,7 +311,7 @@ fun AddTransactionDialog(
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    // 1. Top Bar: [✕ 記一筆] --- [清除] [儲存]
+                    // 1. Top Bar: [✕ 記一筆]
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -343,40 +336,6 @@ fun AddTransactionDialog(
                             color = Color(0xFF0F172A),
                             modifier = Modifier.padding(start = 6.dp)
                         )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        // 清除按鈕
-                        TextButton(
-                            onClick = {
-                                expression = ""
-                                note = ""
-                            }
-                        ) {
-                            Text(
-                                text = "清除",
-                                color = Color(0xFF475569),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        // 儲存按鈕 (深綠膠囊按鈕)
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFF184E38),
-                            modifier = Modifier
-                                .padding(start = 4.dp)
-                                .clickable { doSave(false) }
-                        ) {
-                            Text(
-                                text = "儲存",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
-                            )
-                        }
                     }
 
                     // 2. Type Selector Tabs (支出 / 收入 / 轉帳)
@@ -520,7 +479,7 @@ fun AddTransactionDialog(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (category == "餐飲") "餐飲美食" else category,
+                                    text = category,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF065F46),
@@ -693,7 +652,7 @@ fun AddTransactionDialog(
                         }
                     }
 
-                    // 6. Note and Sub-category Tags Card
+                    // 6. Note Card (No subcategory recommendations)
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFF1F5F2),
@@ -701,102 +660,60 @@ fun AddTransactionDialog(
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Note input line: ✏️ [日式豬排定食套餐] 🎤
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "備註",
-                                    tint = Color(0xFF64748B),
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(modifier = Modifier.weight(1f)) {
-                                    if (note.isEmpty()) {
-                                        Text(
-                                            text = "日式豬排定食套餐",
-                                            fontSize = 13.sp,
-                                            color = Color(0xFF94A3B8)
-                                        )
-                                    }
-                                    BasicTextField(
-                                        value = note,
-                                        onValueChange = { note = it },
-                                        textStyle = TextStyle(
-                                            fontSize = 13.sp,
-                                            color = Color(0xFF0F172A),
-                                            fontWeight = FontWeight.Medium
-                                        ),
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "備註",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (note.isEmpty()) {
+                                    Text(
+                                        text = "輸入備註...",
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF94A3B8)
                                     )
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.Mic,
-                                    contentDescription = "語音輸入",
-                                    tint = Color(0xFF64748B),
-                                    modifier = Modifier.size(16.dp)
+                                BasicTextField(
+                                    value = note,
+                                    onValueChange = { note = it },
+                                    textStyle = TextStyle(
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF0F172A),
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
 
-                            // Quick Subcategory Tags & Checkbox Row
+                            // 不計入預算 Checkbox
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable { excludeFromBudget = !excludeFromBudget }
+                                    .padding(start = 8.dp)
                             ) {
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    currentSubs.take(3).forEach { sub ->
-                                        val tagText = "#$sub"
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFE2E8F0),
-                                            modifier = Modifier.clickable {
-                                                note = if (note.contains(sub)) {
-                                                    note.replace("#$sub", "").trim()
-                                                } else {
-                                                    if (note.isBlank()) tagText else "$note $tagText"
-                                                }
-                                            }
-                                        ) {
-                                            Text(
-                                                text = tagText,
-                                                fontSize = 11.sp,
-                                                color = Color(0xFF334155),
-                                                fontWeight = FontWeight.Medium,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // 不計入預算 Checkbox
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable { excludeFromBudget = !excludeFromBudget }
-                                ) {
-                                    Text(
-                                        text = "不計入預算",
-                                        fontSize = 11.sp,
-                                        color = Color(0xFF475569)
-                                    )
-                                    Checkbox(
-                                        checked = excludeFromBudget,
-                                        onCheckedChange = { excludeFromBudget = it },
-                                        colors = CheckboxDefaults.colors(
-                                            checkedColor = Color(0xFF184E38)
-                                        ),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "不計入預算",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF475569)
+                                )
+                                Checkbox(
+                                    checked = excludeFromBudget,
+                                    onCheckedChange = { excludeFromBudget = it },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = Color(0xFF184E38)
+                                    ),
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         }
                     }
