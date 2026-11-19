@@ -11,6 +11,7 @@ import com.example.debit.data.AppThemeColor
 import com.example.debit.data.Budget
 import com.example.debit.data.DebitRepository
 import com.example.debit.data.ReminderTime
+import com.example.debit.data.SavingsGoal
 import com.example.debit.data.SettingsPreferences
 import com.example.debit.data.Subscription
 import com.example.debit.data.Transaction
@@ -36,7 +37,8 @@ import java.util.Locale
 private data class DataTuple(
     val transactions: List<Transaction>,
     val globalBudget: Budget?,
-    val subscriptions: List<Subscription>
+    val subscriptions: List<Subscription>,
+    val savingsGoals: List<SavingsGoal>
 )
 
 private data class Tuple1(
@@ -132,7 +134,8 @@ data class DebitUiState(
     val autoBackupEnabled: Boolean = true,
     val lastAutoBackupTime: Long = 0L,
     val isInitialized: Boolean = true,
-    val isConfirmDeleteEnabled: Boolean = true
+    val isConfirmDeleteEnabled: Boolean = true,
+    val savingsGoals: List<SavingsGoal> = emptyList()
 ) {
     val remainingBudget: Double
         get() = totalBudgetLimit - totalExpense
@@ -335,13 +338,14 @@ class DebitViewModel(
         combine(
             repository.allTransactions,
             repository.globalBudget,
-            repository.allSubscriptions
-        ) { txs, budget, subs ->
-            DataTuple(txs, budget, subs)
+            repository.allSubscriptions,
+            repository.allSavingsGoals
+        ) { txs, budget, subs, goals ->
+            DataTuple(txs, budget, subs, goals)
         },
         settingsTupleFlow
     ) { dataTuple, prefsTuple ->
-        val (transactions, globalBudget, subscriptions) = dataTuple
+        val (transactions, globalBudget, subscriptions, savingsGoals) = dataTuple
         val selectedYM = prefsTuple.selectedYM
         val themeColor = prefsTuple.themeColor
         val language = prefsTuple.language
@@ -458,7 +462,8 @@ class DebitViewModel(
             autoBackupEnabled = autoBackupOn,
             lastAutoBackupTime = lastBackupTime,
             isInitialized = initialized,
-            isConfirmDeleteEnabled = prefsTuple.confirmDeleteOn
+            isConfirmDeleteEnabled = prefsTuple.confirmDeleteOn,
+            savingsGoals = savingsGoals
         )
     }.stateIn(
         scope = viewModelScope,
@@ -832,6 +837,30 @@ class DebitViewModel(
     fun deleteSubscription(subscription: Subscription) {
         viewModelScope.launch {
             repository.deleteSubscription(subscription)
+        }
+    }
+
+    fun addSavingsGoal(title: String, targetAmount: Double, currentAmount: Double = 0.0) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addSavingsGoal(
+                SavingsGoal(
+                    title = title,
+                    targetAmount = targetAmount,
+                    currentAmount = currentAmount
+                )
+            )
+        }
+    }
+
+    fun updateSavingsGoal(savingsGoal: SavingsGoal) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateSavingsGoal(savingsGoal)
+        }
+    }
+
+    fun deleteSavingsGoal(savingsGoal: SavingsGoal) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteSavingsGoal(savingsGoal)
         }
     }
 

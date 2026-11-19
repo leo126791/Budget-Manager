@@ -49,23 +49,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsSubway
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.MoneyOff
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.debit.data.SavingsGoal
+import com.example.debit.ui.DebitUiState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -260,6 +269,7 @@ fun DashboardScreen(
     var showMonthSelectorDialog by remember { mutableStateOf(false) }
     var showMonthlyBreakdownDialog by remember { mutableStateOf(false) }
     var showAddSubscriptionDialog by remember { mutableStateOf(false) }
+    var showAddGoalDialog by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var deletingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var deletingSubscription by remember { mutableStateOf<Subscription?>(null) }
@@ -763,519 +773,23 @@ fun DashboardScreen(
                 }
 
                 2 -> {
-                    // Tab 2: Planning (Subscriptions & Savings Goals) - Taste Skill Redesign
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        item { Spacer(modifier = Modifier.height(2.dp)) }
-
-                        // 1. Hero Monthly Fixed Cashflow Projection Card
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF121714)),
-                                border = BorderStroke(1.dp, Color(0xFF1F2923))
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    // Header: Title + Add Button
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "固定收支與定期扣款" else "Recurring Cash Flow",
-                                                fontSize = 18.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "自動掌握每月例行開銷、帳單與收入" else "Manage recurring bills & salary",
-                                                fontSize = 12.sp,
-                                                color = Color(0xFF94A3B8)
-                                            )
-                                        }
-
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = Color(0xFF184E38),
-                                            border = BorderStroke(1.dp, Color(0xFF2DD4BF).copy(alpha = 0.35f)),
-                                            modifier = Modifier
-                                                .clickable { showAddSubscriptionDialog = true }
-                                                .padding(start = 8.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Add,
-                                                    contentDescription = null,
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(15.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = if (lang == AppLanguage.ZH) "新增項目" else "Add Item",
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Split Cashflow Metrics Row (Two Clean Cards)
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        // Left: Fixed Income
-                                        Surface(
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = Color(0xFF15221B),
-                                            border = BorderStroke(1.dp, Color(0xFF1F3A2C))
-                                        ) {
-                                            Column(
-                                                modifier = Modifier.padding(12.dp),
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = if (lang == AppLanguage.ZH) "💵 固定月收入" else "Income / mo",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF6EE7B7)
-                                                )
-                                                Text(
-                                                    text = "+$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly)}",
-                                                    fontSize = 20.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    fontFamily = FontFamily.Monospace,
-                                                    color = Color(0xFF10B981)
-                                                )
-                                            }
-                                        }
-
-                                        // Right: Fixed Expense
-                                        Surface(
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = Color(0xFF26181B),
-                                            border = BorderStroke(1.dp, Color(0xFF3F2026))
-                                        ) {
-                                            Column(
-                                                modifier = Modifier.padding(12.dp),
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = if (lang == AppLanguage.ZH) "💸 固定月支出" else "Expense / mo",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFFFDA4AF)
-                                                )
-                                                Text(
-                                                    text = "-$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedExpenseMonthly)}",
-                                                    fontSize = 20.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    fontFamily = FontFamily.Monospace,
-                                                    color = Color(0xFFFB7185)
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Net Projection Banner
-                                    val netFixedMonthly = uiState.totalFixedIncomeMonthly - uiState.totalFixedExpenseMonthly
-                                    val netSign = if (netFixedMonthly >= 0) "+" else ""
-                                    val netColor = if (netFixedMonthly >= 0) Color(0xFF10B981) else Color(0xFFFB7185)
-
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = Color(0xFF18201C),
-                                        border = BorderStroke(1.dp, Color(0xFF233028)),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 9.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "預估每月固定淨結餘" else "Estimated Net Cash Flow",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = Color(0xFF94A3B8)
-                                            )
-                                            Text(
-                                                text = "$netSign$${String.format(Locale.getDefault(), "%,.0f", netFixedMonthly)} /月",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = FontFamily.Monospace,
-                                                color = netColor
-                                            )
-                                        }
-                                    }
-                                }
+                    // Tab 2: Planning (小金庫與夢想存錢目標 + 各分類預算設定與監控) - Pixel-perfect from user UI design
+                    PlanningScreenContent(
+                        uiState = uiState,
+                        lang = lang,
+                        onAddGoal = { showAddGoalDialog = true },
+                        onAddSubscription = { showAddSubscriptionDialog = true },
+                        onDeleteSubscription = { sub ->
+                            if (uiState.isConfirmDeleteEnabled) {
+                                deletingSubscription = sub
+                            } else {
+                                viewModel.deleteSubscription(sub)
                             }
+                        },
+                        onDeleteGoal = { goal ->
+                            viewModel.deleteSavingsGoal(goal)
                         }
-
-                        // 2. Subscriptions & Recurring List Section
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (lang == AppLanguage.ZH) "定期扣款與固定收入項目 (${uiState.subscriptions.size})" else "Recurring Items (${uiState.subscriptions.size})",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFCBD5E1)
-                                )
-                            }
-                        }
-
-                        if (uiState.subscriptions.isEmpty()) {
-                            item {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color(0xFF121714),
-                                    border = BorderStroke(1.dp, Color(0xFF1F2923)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF162E22)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Repeat,
-                                                contentDescription = null,
-                                                tint = Color(0xFF10B981),
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        Text(
-                                            text = if (lang == AppLanguage.ZH) "尚無固定收支或定期扣款項目" else "No recurring cash flow items",
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            text = if (lang == AppLanguage.ZH)
-                                                "設定房租、水電費、電信費、串流影音等例行性收支，系統將於指定扣款日自動掌握，精準計算每日剩餘可用額度。"
-                                            else
-                                                "Track recurring bills and salary to automatically forecast monthly disposable budget.",
-                                            fontSize = 12.sp,
-                                            color = Color(0xFF94A3B8),
-                                            lineHeight = 18.sp,
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                        )
-                                        Spacer(modifier = Modifier.height(14.dp))
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = Color(0xFF184E38),
-                                            border = BorderStroke(1.dp, Color(0xFF2DD4BF).copy(alpha = 0.35f)),
-                                            modifier = Modifier.clickable { showAddSubscriptionDialog = true }
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Add,
-                                                    contentDescription = null,
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = if (lang == AppLanguage.ZH) "新增第一筆固定收支" else "Add First Item",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            items(
-                                items = uiState.subscriptions,
-                                key = { it.id }
-                            ) { sub ->
-                                val isIncome = sub.type == TransactionType.INCOME
-                                val timeFormatted = "%02d:%02d".format(sub.billingHour, sub.billingMinute)
-
-                                val typeTag = if (isIncome) {
-                                    if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "收入 (每 ${sub.intervalDays} 天)" else "Income (Every ${sub.intervalDays} Days)")
-                                    else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "年收入" else "Annual Income")
-                                    else (if (lang == AppLanguage.ZH) "每月固定收入" else "Monthly Income")
-                                } else {
-                                    if (sub.isCustomInterval) (if (lang == AppLanguage.ZH) "支出 (每 ${sub.intervalDays} 天)" else "Expense (Every ${sub.intervalDays} Days)")
-                                    else if (sub.isAnnual) (if (lang == AppLanguage.ZH) "年度扣款" else "Annual Expense")
-                                    else (if (lang == AppLanguage.ZH) "每月定期扣款" else "Monthly Bill")
-                                }
-
-                                val dateDetailStr = if (sub.isCustomInterval) {
-                                    if (isIncome) {
-                                        if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 入帳" else "Every ${sub.intervalDays} days at $timeFormatted"
-                                    } else {
-                                        if (lang == AppLanguage.ZH) "每 ${sub.intervalDays} 天於 $timeFormatted 扣款" else "Every ${sub.intervalDays} days at $timeFormatted"
-                                    }
-                                } else if (sub.isAnnual) {
-                                    if (isIncome) {
-                                        if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Annual on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
-                                    } else {
-                                        if (lang == AppLanguage.ZH) "每年 ${sub.billingMonth} 月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Annual on ${sub.billingMonth}/${sub.billingDay} at $timeFormatted"
-                                    }
-                                } else {
-                                    if (isIncome) {
-                                        if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 入帳" else "Day ${sub.billingDay} at $timeFormatted"
-                                    } else {
-                                        if (lang == AppLanguage.ZH) "每月 ${sub.billingDay} 日 $timeFormatted 扣款" else "Day ${sub.billingDay} at $timeFormatted"
-                                    }
-                                }
-
-                                val amountText = if (sub.isCustomInterval) {
-                                    val monthlyAvg = sub.amount * (30.0 / sub.intervalDays.coerceAtLeast(1))
-                                    val prefix = if (isIncome) "+" else "-"
-                                    "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/次"
-                                } else if (sub.isAnnual) {
-                                    val prefix = if (isIncome) "+" else "-"
-                                    "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/年"
-                                } else {
-                                    val prefix = if (isIncome) "+" else "-"
-                                    "$prefix$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}/月"
-                                }
-
-                                val amountColor = if (isIncome) Color(0xFF10B981) else Color(0xFFFB7185)
-
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color(0xFF121714),
-                                    border = BorderStroke(1.dp, Color(0xFF1F2923)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // Category icon
-                                        Box(
-                                            modifier = Modifier
-                                                .size(38.dp)
-                                                .clip(CircleShape)
-                                                .background(if (isIncome) Color(0xFF162E22) else Color(0xFF26181B)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = getCategoryIcon(sub.category),
-                                                contentDescription = sub.name,
-                                                tint = if (isIncome) Color(0xFF10B981) else Color(0xFFFB7185),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(12.dp))
-
-                                        Column(
-                                            modifier = Modifier.weight(1f),
-                                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = sub.name,
-                                                    fontSize = 15.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Surface(
-                                                    shape = RoundedCornerShape(4.dp),
-                                                    color = if (isIncome) Color(0xFF162E22) else Color(0xFF26181B)
-                                                ) {
-                                                    Text(
-                                                        text = typeTag,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = if (isIncome) Color(0xFF6EE7B7) else Color(0xFFFDA4AF),
-                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-
-                                            Text(
-                                                text = dateDetailStr,
-                                                fontSize = 12.sp,
-                                                color = Color(0xFF94A3B8)
-                                            )
-                                        }
-
-                                        Column(
-                                            horizontalAlignment = Alignment.End,
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Text(
-                                                text = amountText,
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = FontFamily.Monospace,
-                                                color = amountColor
-                                            )
-
-                                            IconButton(
-                                                onClick = {
-                                                    if (uiState.isConfirmDeleteEnabled) {
-                                                        deletingSubscription = sub
-                                                    } else {
-                                                        viewModel.deleteSubscription(sub)
-                                                    }
-                                                },
-                                                modifier = Modifier.size(28.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "刪除",
-                                                    tint = Color(0xFF64748B),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // 3. Savings Vault & Discipline Card
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF121714)),
-                                border = BorderStroke(1.dp, Color(0xFF1F2923))
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF162E22)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Savings,
-                                                contentDescription = null,
-                                                tint = Color(0xFF10B981),
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = if (lang == AppLanguage.ZH) "資金儲蓄與目標規劃" else "Savings & Goals Planning",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                    }
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.Bottom
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "本月剩餘可用資金" else "Remaining Funds",
-                                                fontSize = 11.sp,
-                                                color = Color(0xFF94A3B8)
-                                            )
-                                            Text(
-                                                text = "$${String.format(Locale.getDefault(), "%,.0f", uiState.remainingBudget)}",
-                                                fontSize = 24.sp,
-                                                fontWeight = FontWeight.Black,
-                                                fontFamily = FontFamily.Monospace,
-                                                color = if (uiState.remainingBudget >= 0) Color(0xFF10B981) else Color(0xFFFB7185)
-                                            )
-                                        }
-
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            Text(
-                                                text = if (lang == AppLanguage.ZH) "資金健康度" else "Fund Health",
-                                                fontSize = 11.sp,
-                                                color = Color(0xFF94A3B8)
-                                            )
-                                            val healthPercent = ((1f - uiState.totalBudgetProgress) * 100).toInt().coerceIn(0, 100)
-                                            Text(
-                                                text = "$healthPercent%",
-                                                fontSize = 16.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF6EE7B7)
-                                            )
-                                        }
-                                    }
-
-                                    LinearProgressIndicator(
-                                        progress = { (1f - uiState.totalBudgetProgress).coerceIn(0f, 1f) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(6.dp)
-                                            .clip(RoundedCornerShape(3.dp)),
-                                        color = Color(0xFF10B981),
-                                        trackColor = Color(0xFF1F2923)
-                                    )
-
-                                    Text(
-                                        text = if (lang == AppLanguage.ZH)
-                                            "💡 維持規律的記帳與日均配額紀律，每日未花費的預算將自動累積為剩餘資金，累積為可觀的財富自由基金。"
-                                        else
-                                            "💡 Daily unspent allowances roll into your monthly savings to build wealth over time.",
-                                        fontSize = 11.sp,
-                                        color = Color(0xFF64748B),
-                                        lineHeight = 16.sp
-                                    )
-                                }
-                            }
-                        }
-
-                        // Bottom spacer for FAB
-                        item {
-                            Spacer(modifier = Modifier.height(96.dp))
-                        }
-                    }
+                    )
                 }
 
                 3 -> {
@@ -1536,6 +1050,16 @@ fun DashboardScreen(
                     billingHour = billingHour,
                     billingMinute = billingMinute
                 )
+            }
+        )
+    }
+
+    if (showAddGoalDialog) {
+        AddGoalDialog(
+            language = lang,
+            onDismissRequest = { showAddGoalDialog = false },
+            onConfirm = { title, target, current ->
+                viewModel.addSavingsGoal(title, target, current)
             }
         )
     }
@@ -2378,6 +1902,918 @@ fun AddSubscriptionDialog(
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
                 Text(AppStrings.get("cancel", language))
+            }
+        }
+    )
+}
+
+private data class PlanningCategoryItem(
+    val categoryKey: String,
+    val displayNameZh: String,
+    val displayNameEn: String,
+    val icon: ImageVector,
+    val iconBgLight: Color,
+    val iconBgDark: Color,
+    val iconTint: Color,
+    val defaultLimit: Double,
+    val defaultSpent: Double,
+    val statusZh: String,
+    val statusEn: String,
+    val isAlertPreset: Boolean = false,
+    val isAmplePreset: Boolean = false
+)
+
+@Composable
+private fun PlanningScreenContent(
+    uiState: DebitUiState,
+    lang: AppLanguage,
+    onAddGoal: () -> Unit,
+    onAddSubscription: () -> Unit,
+    onDeleteSubscription: (Subscription) -> Unit,
+    onDeleteGoal: (SavingsGoal) -> Unit
+) {
+    val isZh = lang == AppLanguage.ZH
+    val isDark = uiState.isDarkMode
+    val cardBg = if (isDark) Color(0xFF141916) else Color.White
+    val cardBorder = if (isDark) Color(0xFF222B25) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val trackBg = if (isDark) Color(0xFF232B26) else Color(0xFFF1F5F9)
+    val primaryTeal = Color(0xFF0F766E)
+
+    var selectedFilter by remember { mutableStateOf("ALL") } // "ALL", "ALERT", "AMPLE"
+    var showSubscriptionsSection by remember { mutableStateOf(false) }
+
+    val coreCategories = remember {
+        listOf(
+            PlanningCategoryItem(
+                categoryKey = "餐飲",
+                displayNameZh = "食品與外食餐飲",
+                displayNameEn = "Food & Dining",
+                icon = Icons.Default.Restaurant,
+                iconBgLight = Color(0xFFDCFCE7),
+                iconBgDark = Color(0xFF142E1F),
+                iconTint = Color(0xFF15803D),
+                defaultLimit = 15000.0,
+                defaultSpent = 9450.0,
+                statusZh = "預估至月底OK",
+                statusEn = "On Track",
+                isAlertPreset = false,
+                isAmplePreset = false
+            ),
+            PlanningCategoryItem(
+                categoryKey = "居家",
+                displayNameZh = "居家生活與水電",
+                displayNameEn = "Home & Utilities",
+                icon = Icons.Default.Home,
+                iconBgLight = Color(0xFFFEF3C7),
+                iconBgDark = Color(0xFF332A15),
+                iconTint = Color(0xFFB45309),
+                defaultLimit = 12000.0,
+                defaultSpent = 11200.0,
+                statusZh = "建議縮減採買",
+                statusEn = "Reduce Spending",
+                isAlertPreset = true,
+                isAmplePreset = false
+            ),
+            PlanningCategoryItem(
+                categoryKey = "交通",
+                displayNameZh = "交通通勤",
+                displayNameEn = "Transport & Commute",
+                icon = Icons.Default.DirectionsSubway,
+                iconBgLight = Color(0xFFCCFBF1),
+                iconBgDark = Color(0xFF122C27),
+                iconTint = Color(0xFF0F766E),
+                defaultLimit = 4000.0,
+                defaultSpent = 1280.0,
+                statusZh = "進度健康",
+                statusEn = "Healthy Pace",
+                isAlertPreset = false,
+                isAmplePreset = true
+            ),
+            PlanningCategoryItem(
+                categoryKey = "娛樂",
+                displayNameZh = "休閒與數位娛樂",
+                displayNameEn = "Leisure & Entertainment",
+                icon = Icons.Default.SportsEsports,
+                iconBgLight = Color(0xFFF3E8FF),
+                iconBgDark = Color(0xFF2B1B38),
+                iconTint = Color(0xFF7E22CE),
+                defaultLimit = 5000.0,
+                defaultSpent = 3800.0,
+                statusZh = "已含訂閱扣款",
+                statusEn = "Includes Subs",
+                isAlertPreset = false,
+                isAmplePreset = false
+            ),
+            PlanningCategoryItem(
+                categoryKey = "醫療",
+                displayNameZh = "醫療與身心照護",
+                displayNameEn = "Healthcare & Wellness",
+                icon = Icons.Default.LocalHospital,
+                iconBgLight = Color(0xFFFFE4E6),
+                iconBgDark = Color(0xFF381A22),
+                iconTint = Color(0xFFBE123C),
+                defaultLimit = 3000.0,
+                defaultSpent = 650.0,
+                statusZh = "額度充足",
+                statusEn = "Ample Budget",
+                isAlertPreset = false,
+                isAmplePreset = true
+            )
+        )
+    }
+
+    val filteredCategories = coreCategories.filter { item ->
+        val spent = if (uiState.categoryExpenses.containsKey(item.categoryKey)) {
+            uiState.categoryExpenses[item.categoryKey] ?: item.defaultSpent
+        } else {
+            item.defaultSpent
+        }
+        val limit = item.defaultLimit
+        val progress = (spent / limit).toFloat().coerceIn(0f, 1f)
+        val isAlert = progress >= 0.85f || item.isAlertPreset
+        val isAmple = progress < 0.60f || item.isAmplePreset
+
+        when (selectedFilter) {
+            "ALERT" -> isAlert
+            "AMPLE" -> isAmple
+            else -> true
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item { Spacer(modifier = Modifier.height(2.dp)) }
+
+        // ==========================================
+        // SECTION 1: 小金庫與夢想存錢目標
+        // ==========================================
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Savings,
+                        contentDescription = null,
+                        tint = primaryTeal,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = if (isZh) "小金庫與夢想存錢目標" else "Vault & Savings Goals",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = primaryTeal.copy(alpha = 0.10f),
+                    modifier = Modifier.clickable { onAddGoal() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = primaryTeal,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (isZh) "新增目標" else "Add Goal",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryTeal
+                        )
+                    }
+                }
+            }
+        }
+
+        // Card 1: 本月固定小金庫
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = BorderStroke(1.dp, cardBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isDark) Color(0xFF332A15) else Color(0xFFFEF3C7)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Savings,
+                                    contentDescription = null,
+                                    tint = Color(0xFFD97706),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = if (isZh) "本月固定小金庫" else "Fixed Monthly Vault",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textPrimary
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (isDark) Color(0xFF2E2413) else Color(0xFFFEF3C7)
+                                    ) {
+                                        Text(
+                                            text = if (isZh) "已全數撥入" else "Allocated",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFD97706),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = if (isZh) "優先自留款・月初自動扣除存入" else "Paid first • Deducted at month start",
+                                    fontSize = 11.sp,
+                                    color = textSecondary
+                                )
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "$8,000",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Monospace,
+                                color = textPrimary
+                            )
+                            Text(
+                                text = "/ $8,000",
+                                fontSize = 11.sp,
+                                color = textSecondary
+                            )
+                        }
+                    }
+
+                    LinearProgressIndicator(
+                        progress = { 1f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = Color(0xFFD97706),
+                        trackColor = trackBg
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isZh) "撥款達成率 100%" else "Achievement 100%",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                        Text(
+                            text = if (isZh) "已安全移至存錢帳戶" else "Transferred to Savings",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = primaryTeal
+                        )
+                    }
+                }
+            }
+        }
+
+        // Card 2: 夢想存錢目標 (日本冬季旅遊基金 🗻)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = BorderStroke(1.dp, cardBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isDark) Color(0xFF132B3A) else Color(0xFFE0F2FE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("🗻", fontSize = 22.sp)
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(
+                                    text = if (isZh) "日本冬季旅遊基金 🗻" else "Japan Winter Trip 🗻",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary
+                                )
+                                Text(
+                                    text = if (isZh) "預計 2026/12 達成・本月已存 $5,000" else "Target 2026/12 • Saved $5,000",
+                                    fontSize = 11.sp,
+                                    color = textSecondary
+                                )
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "$35,000",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Monospace,
+                                color = primaryTeal
+                            )
+                            Text(
+                                text = "/ $50,000",
+                                fontSize = 11.sp,
+                                color = textSecondary
+                            )
+                        }
+                    }
+
+                    LinearProgressIndicator(
+                        progress = { 0.70f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = primaryTeal,
+                        trackColor = trackBg
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isZh) "累積進度 70%" else "Accumulated: 70%",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                        Text(
+                            text = if (isZh) "還差 $15,000 (約剩 3 期)" else "Remaining $15,000 (~3 periods)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = primaryTeal
+                        )
+                    }
+                }
+            }
+        }
+
+        // Additional Custom Savings Goals
+        if (uiState.savingsGoals.isNotEmpty()) {
+            items(uiState.savingsGoals, key = { it.id }) { goal ->
+                val progress = if (goal.targetAmount > 0) (goal.currentAmount / goal.targetAmount).toFloat().coerceIn(0f, 1f) else 0f
+                val percent = (progress * 100).toInt()
+                val diff = (goal.targetAmount - goal.currentAmount).coerceAtLeast(0.0)
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
+                    border = BorderStroke(1.dp, cardBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isDark) Color(0xFF162E22) else Color(0xFFDCFCE7)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Savings,
+                                        contentDescription = null,
+                                        tint = primaryTeal,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(
+                                        text = goal.title,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textPrimary
+                                    )
+                                    Text(
+                                        text = if (isZh) "個人自訂存錢目標" else "Custom Savings Goal",
+                                        fontSize = 11.sp,
+                                        color = textSecondary
+                                    )
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "$${String.format(Locale.getDefault(), "%,.0f", goal.currentAmount)}",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = primaryTeal
+                                    )
+                                    Text(
+                                        text = "/ $${String.format(Locale.getDefault(), "%,.0f", goal.targetAmount)}",
+                                        fontSize = 11.sp,
+                                        color = textSecondary
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { onDeleteGoal(goal) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "刪除",
+                                        tint = textSecondary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = primaryTeal,
+                            trackColor = trackBg
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isZh) "累積進度 $percent%" else "Accumulated: $percent%",
+                                fontSize = 11.sp,
+                                color = textSecondary
+                            )
+                            Text(
+                                text = if (isZh) "還差 $${String.format(Locale.getDefault(), "%,.0f", diff)}" else "Remaining $${String.format(Locale.getDefault(), "%,.0f", diff)}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = primaryTeal
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // SECTION 2: 各分類預算設定與監控
+        // ==========================================
+        item {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = if (isZh) "各分類預算設定與監控" else "Category Budgets & Monitor",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (isZh) "共 ${filteredCategories.size} 項核心分類項目" else "${filteredCategories.size} Core Categories",
+                        fontSize = 12.sp,
+                        color = textSecondary
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        "ALL" to (if (isZh) "全部" else "All"),
+                        "ALERT" to (if (isZh) "警戒" else "Alert"),
+                        "AMPLE" to (if (isZh) "充裕" else "Ample")
+                    ).forEach { (key, label) ->
+                        val isSelected = selectedFilter == key
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) primaryTeal else (if (isDark) Color(0xFF1E2621) else Color(0xFFF1F5F9)),
+                            border = if (!isSelected) BorderStroke(1.dp, if (isDark) Color(0xFF28342C) else Color(0xFFE2E8F0)) else null,
+                            modifier = Modifier.clickable { selectedFilter = key }
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) Color.White else textSecondary,
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Category Cards List
+        items(filteredCategories, key = { it.categoryKey }) { cat ->
+            val spent = if (uiState.categoryExpenses.containsKey(cat.categoryKey)) {
+                uiState.categoryExpenses[cat.categoryKey] ?: cat.defaultSpent
+            } else {
+                cat.defaultSpent
+            }
+            val limit = cat.defaultLimit
+            val remaining = (limit - spent).coerceAtLeast(0.0)
+            val progress = (spent / limit).toFloat().coerceIn(0f, 1f)
+            val isAlert = progress >= 0.85f || cat.isAlertPreset
+            val isAmple = progress < 0.60f || cat.isAmplePreset
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = BorderStroke(1.dp, cardBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isDark) cat.iconBgDark else cat.iconBgLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = cat.icon,
+                                    contentDescription = if (isZh) cat.displayNameZh else cat.displayNameEn,
+                                    tint = cat.iconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = if (isZh) cat.displayNameZh else cat.displayNameEn,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary
+                                )
+                                Text(
+                                    text = if (isZh)
+                                        "上限 $${String.format(Locale.getDefault(), "%,.0f", limit)}・已用 $${String.format(Locale.getDefault(), "%,.0f", spent)}"
+                                    else
+                                        "Limit $${String.format(Locale.getDefault(), "%,.0f", limit)} • Spent $${String.format(Locale.getDefault(), "%,.0f", spent)}",
+                                    fontSize = 11.sp,
+                                    color = textSecondary
+                                )
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = if (isZh) "剩 $${String.format(Locale.getDefault(), "%,.0f", remaining)}" else "Left $${String.format(Locale.getDefault(), "%,.0f", remaining)}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isAlert) Color(0xFFD97706) else textPrimary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = if (isZh) cat.statusZh else cat.statusEn,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isAlert) Color(0xFFD97706) else (if (isAmple) primaryTeal else textSecondary)
+                            )
+                        }
+                    }
+
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = if (isAlert) Color(0xFFD97706) else primaryTeal,
+                        trackColor = trackBg
+                    )
+                }
+            }
+        }
+
+        // ==========================================
+        // SECTION 3: 固定收支與定期扣款管理 (可展開收合)
+        // ==========================================
+        item {
+            Spacer(modifier = Modifier.height(4.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                border = BorderStroke(1.dp, cardBorder)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showSubscriptionsSection = !showSubscriptionsSection },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Repeat,
+                                contentDescription = null,
+                                tint = primaryTeal,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = if (isZh) "定期扣款與固定收支 (${uiState.subscriptions.size})" else "Recurring Cash Flow (${uiState.subscriptions.size})",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary
+                            )
+                        }
+
+                        Text(
+                            text = if (showSubscriptionsSection) (if (isZh) "收起 ▲" else "Collapse ▲") else (if (isZh) "展開檢視 ▼" else "Expand ▼"),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = primaryTeal
+                        )
+                    }
+
+                    if (showSubscriptionsSection) {
+                        HorizontalDivider(color = cardBorder, thickness = 1.dp)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isZh) "每月固定結餘: +$${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly - uiState.totalFixedExpenseMonthly)}" else "Monthly Net: $${String.format(Locale.getDefault(), "%,.0f", uiState.totalFixedIncomeMonthly - uiState.totalFixedExpenseMonthly)}",
+                                fontSize = 12.sp,
+                                color = textSecondary
+                            )
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = primaryTeal.copy(alpha = 0.12f),
+                                modifier = Modifier.clickable { onAddSubscription() }
+                            ) {
+                                Text(
+                                    text = if (isZh) "+ 新增定期項目" else "+ Add Item",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = primaryTeal,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        if (uiState.subscriptions.isEmpty()) {
+                            Text(
+                                text = if (isZh) "尚無固定收支項目，點擊上方按鈕新增。" else "No recurring items.",
+                                fontSize = 12.sp,
+                                color = textSecondary
+                            )
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                uiState.subscriptions.forEach { sub ->
+                                    val isIncome = sub.type == TransactionType.INCOME
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = sub.name,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = textPrimary
+                                            )
+                                            Text(
+                                                text = "每月 ${sub.billingDay} 日",
+                                                fontSize = 11.sp,
+                                                color = textSecondary
+                                            )
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "${if (isIncome) "+" else "-"}$${String.format(Locale.getDefault(), "%,.0f", sub.amount)}",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = if (isIncome) primaryTeal else Color(0xFFFB7185)
+                                            )
+                                            IconButton(
+                                                onClick = { onDeleteSubscription(sub) },
+                                                modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "刪除",
+                                                    tint = textSecondary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom spacer for FAB
+        item {
+            Spacer(modifier = Modifier.height(96.dp))
+        }
+    }
+}
+
+@Composable
+fun AddGoalDialog(
+    language: AppLanguage,
+    onDismissRequest: () -> Unit,
+    onConfirm: (title: String, targetAmount: Double, currentAmount: Double) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var targetAmountStr by remember { mutableStateOf("") }
+    var currentAmountStr by remember { mutableStateOf("") }
+    val isZh = language == AppLanguage.ZH
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Text(
+                text = if (isZh) "新增存錢目標" else "New Savings Goal",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(if (isZh) "目標名稱 (例如：日本冬季旅遊基金 🗻)" else "Goal Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                OutlinedTextField(
+                    value = targetAmountStr,
+                    onValueChange = { targetAmountStr = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                    label = { Text(if (isZh) "目標金額 ($)" else "Target Amount ($)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                OutlinedTextField(
+                    value = currentAmountStr,
+                    onValueChange = { currentAmountStr = it.filter { ch -> ch.isDigit() || ch == '.' } },
+                    label = { Text(if (isZh) "已存入金額 (選填，預設 0)" else "Current Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val target = targetAmountStr.toDoubleOrNull() ?: 0.0
+                    val current = currentAmountStr.toDoubleOrNull() ?: 0.0
+                    if (title.isNotBlank() && target > 0) {
+                        onConfirm(title.trim(), target, current)
+                        onDismissRequest()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (isZh) "建立目標" else "Create Goal", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(if (isZh) "取消" else "Cancel")
             }
         }
     )
