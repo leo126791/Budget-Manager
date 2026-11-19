@@ -1,48 +1,58 @@
 package com.example.debit.ui.dialogs
 
-import android.Manifest
-import android.app.TimePickerDialog
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -51,41 +61,96 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.debit.data.AppLanguage
 import com.example.debit.data.Transaction
 import com.example.debit.data.TransactionType
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import com.example.debit.ui.utils.AppStrings
-import com.example.debit.ui.utils.GpsLocationUtils
 import com.example.debit.ui.utils.getCategoryIcon
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-val defaultExpenseCategories = listOf("餐飲", "日常", "娛樂", "購物", "交通", "醫療", "居住", "其他")
-val defaultIncomeCategories = listOf("薪水", "兼職", "獎金", "投資", "零用錢", "其他收入")
-val defaultAccounts = listOf("現金", "信用卡", "銀行帳戶", "電子支付")
+val defaultExpenseCategories = listOf("餐飲", "交通", "購物", "娛樂", "居家", "醫療", "進修", "更多")
+val defaultIncomeCategories = listOf("薪水", "兼職", "獎金", "投資", "零用錢", "其他")
+val defaultAccounts = listOf("LINE Pay (中信)", "現金", "信用卡", "銀行帳戶", "電子支付")
 
 val defaultSubCategoriesMap = mapOf(
-    "餐飲" to listOf("早餐", "午餐", "晚餐", "宵夜", "點心飲料"),
-    "日常" to listOf("電費", "洗衣", "烘衣", "日用品"),
-    "娛樂" to listOf("電影", "遊戲", "KTV", "景點門票"),
-    "購物" to listOf("服飾", "鞋包", "3C數碼", "美妝保養"),
+    "餐飲" to listOf("商業午餐", "外帶", "聚餐", "早餐", "晚餐", "飲料"),
     "交通" to listOf("捷運/公車", "加油", "計程車", "停車費"),
-    "醫療" to listOf("掛號費", "藥品", "保健品", "健檢"),
-    "居住" to listOf("房租", "水費", "瓦斯費", "管理費", "寬頻網路"),
-    "其他" to listOf("雜項", "禮物", "捐款")
+    "購物" to listOf("日常用品", "服飾", "3C家電", "網購"),
+    "娛樂" to listOf("電影", "遊戲", "聚會", "活動門票"),
+    "居家" to listOf("水電費", "洗衣", "房租", "日常雜貨"),
+    "醫療" to listOf("掛號費", "藥品", "健檢", "保健品"),
+    "進修" to listOf("書籍", "線上課程", "講座", "文具"),
+    "更多" to listOf("雜項", "禮物", "公益捐款")
 )
 
-val defaultLocations = listOf("7-11", "全家", "麥當勞", "星巴克", "全聯", "加油站")
+private fun evaluateExpression(expr: String): Double? {
+    try {
+        val clean = expr.replace("×", "*").replace("÷", "/")
+        val tokens = mutableListOf<String>()
+        var currentNumber = StringBuilder()
+        for (char in clean) {
+            if (char.isDigit() || char == '.') {
+                currentNumber.append(char)
+            } else if (char in listOf('+', '-', '*', '/')) {
+                if (currentNumber.isNotEmpty()) {
+                    tokens.add(currentNumber.toString())
+                    currentNumber = StringBuilder()
+                }
+                tokens.add(char.toString())
+            }
+        }
+        if (currentNumber.isNotEmpty()) {
+            tokens.add(currentNumber.toString())
+        }
+        if (tokens.isEmpty()) return null
+
+        val intermediateTokens = mutableListOf<String>()
+        var i = 0
+        while (i < tokens.size) {
+            val token = tokens[i]
+            if (token == "*" || token == "/") {
+                if (intermediateTokens.isNotEmpty() && i + 1 < tokens.size) {
+                    val prev = intermediateTokens.removeAt(intermediateTokens.size - 1).toDoubleOrNull() ?: return null
+                    val next = tokens[i + 1].toDoubleOrNull() ?: return null
+                    val res = if (token == "*") prev * next else if (next != 0.0) prev / next else 0.0
+                    intermediateTokens.add(res.toString())
+                    i += 2
+                    continue
+                }
+            }
+            intermediateTokens.add(token)
+            i++
+        }
+
+        var result = intermediateTokens.firstOrNull()?.toDoubleOrNull() ?: return null
+        var j = 1
+        while (j < intermediateTokens.size) {
+            val op = intermediateTokens[j]
+            val next = intermediateTokens.getOrNull(j + 1)?.toDoubleOrNull() ?: break
+            if (op == "+") result += next
+            if (op == "-") result -= next
+            j += 2
+        }
+        return result
+    } catch (_: Exception) {
+        return null
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -102,471 +167,804 @@ fun AddTransactionDialog(
     onDismissRequest: () -> Unit,
     onConfirm: (amount: Double, category: String, note: String, date: Long, locationName: String, deductFromPool: Boolean, accountName: String, type: TransactionType) -> Unit
 ) {
-    val context = LocalContext.current
     val isZh = language == AppLanguage.ZH
 
-    var transactionType by remember {
-        mutableStateOf(initialTransaction?.type ?: TransactionType.EXPENSE)
-    }
-    var accountName by remember {
-        mutableStateOf(initialTransaction?.accountName ?: "現金")
+    // Transaction Type: EXPENSE, INCOME, TRANSFER
+    var selectedTypeTab by remember {
+        mutableStateOf(
+            when (initialTransaction?.type) {
+                TransactionType.INCOME -> "INCOME"
+                else -> if (initialTransaction?.note?.startsWith("[轉帳]") == true) "TRANSFER" else "EXPENSE"
+            }
+        )
     }
 
-    var amountText by remember {
+    var accountName by remember {
+        mutableStateOf(initialTransaction?.accountName ?: "LINE Pay (中信)")
+    }
+    var showAccountMenu by remember { mutableStateOf(false) }
+
+    var category by remember {
+        mutableStateOf(
+            initialTransaction?.category ?: defaultExpenseCategories.first()
+        )
+    }
+
+    // Formula & Calculator state
+    var expression by remember {
         mutableStateOf(
             initialTransaction?.amount?.let {
                 if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()
             } ?: ""
         )
     }
-    var category by remember {
-        mutableStateOf(initialTransaction?.category ?: defaultExpenseCategories.first())
-    }
-    var selectedSubCategory by remember {
-        mutableStateOf<String?>(
-            initialTransaction?.note?.split(" • ")?.firstOrNull()
+
+    var note by remember {
+        mutableStateOf(
+            initialTransaction?.note?.removePrefix("[轉帳] ") ?: ""
         )
     }
-    var showAddSubDialog by remember { mutableStateOf(false) }
-    var customSubInput by remember { mutableStateOf("") }
+    var excludeFromBudget by remember { mutableStateOf(false) }
+
+    var selectedDateMillis by remember {
+        mutableLongStateOf(initialTransaction?.date ?: System.currentTimeMillis())
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showCustomCategoryDialog by remember { mutableStateOf(false) }
+    var customCategoryInput by remember { mutableStateOf("") }
     var customSubVersion by remember { mutableIntStateOf(0) }
 
-    val defaultSubs = defaultSubCategoriesMap[category] ?: emptyList()
+    // Calculated amount
+    val calculatedAmount = remember(expression) {
+        if (expression.isBlank()) 0.0
+        else evaluateExpression(expression) ?: 0.0
+    }
+
+    val displayAmountString = remember(calculatedAmount, expression) {
+        if (expression.isBlank()) "0"
+        else if (calculatedAmount % 1.0 == 0.0) calculatedAmount.toInt().toString()
+        else String.format(Locale.US, "%.2f", calculatedAmount)
+    }
+
+    // Quick tags for currently selected category
+    val defaultSubs = defaultSubCategoriesMap[category] ?: listOf("日常", "個人")
     val currentSubs = remember(category, customSubVersion) {
         val custom = onGetCustomSubCategories(category)
         (defaultSubs + custom).distinct()
     }
-    var locationName by remember {
-        mutableStateOf(initialTransaction?.locationName ?: "")
-    }
-    var note by remember { mutableStateOf(initialTransaction?.note ?: "") }
-    var selectedDateMillis by remember {
-        mutableLongStateOf(initialTransaction?.date ?: System.currentTimeMillis())
-    }
-    var amountError by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
 
-    val formattedDate = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(selectedDateMillis))
-    val formattedTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(selectedDateMillis))
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions.values.any { it }) {
-            GpsLocationUtils.getCurrentGpsLocationName(context) { gpsName ->
-                if (gpsName.isNotBlank()) {
-                    locationName = gpsName
-                }
-            }
+    // Date formatting: "今天 MM/dd" or "yyyy/MM/dd"
+    val dateDisplay = remember(selectedDateMillis) {
+        val now = Calendar.getInstance()
+        val target = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+        val isToday = now.get(Calendar.YEAR) == target.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == target.get(Calendar.DAY_OF_YEAR)
+        if (isToday) {
+            "今天 " + SimpleDateFormat("MM/dd", Locale.getDefault()).format(Date(selectedDateMillis))
+        } else {
+            SimpleDateFormat("MM/dd", Locale.getDefault()).format(Date(selectedDateMillis))
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (locationPredictionEnabled && locationName.isBlank()) {
-            if (GpsLocationUtils.hasLocationPermission(context)) {
-                GpsLocationUtils.getCurrentGpsLocationName(context) { gpsName ->
-                    if (gpsName.isNotBlank()) {
-                        locationName = gpsName
-                    }
-                }
+    // Cursor animation
+    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
+    val cursorAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cursorAlpha"
+    )
+
+    // Save helper
+    val doSave: (Boolean) -> Unit = { keepOpen ->
+        val finalAmount = if (calculatedAmount > 0) calculatedAmount else (expression.toDoubleOrNull() ?: 0.0)
+        if (finalAmount > 0) {
+            val transType = when (selectedTypeTab) {
+                "INCOME" -> TransactionType.INCOME
+                else -> TransactionType.EXPENSE
             }
-        }
-    }
+            val finalNote = if (selectedTypeTab == "TRANSFER") {
+                if (note.isNotBlank()) "[轉帳] $note" else "[轉帳]"
+            } else note.trim()
 
-    val estimate = remember(locationName, note) {
-        val query = locationName.ifBlank { note }
-        onGetLocationEstimate(query)
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = {
-            Text(
-                text = if (initialTransaction == null) AppStrings.get("add_expense", language) else AppStrings.get("edit_record", language),
-                style = MaterialTheme.typography.titleLarge
+            onConfirm(
+                finalAmount,
+                category,
+                finalNote,
+                selectedDateMillis,
+                "", // location
+                excludeFromBudget,
+                accountName,
+                transType
             )
-        },
-        text = {
-            Column(
+
+            if (keepOpen) {
+                expression = ""
+                note = ""
+            } else {
+                onDismissRequest()
+            }
+        }
+    }
+
+    // Dialog layout matching user screenshot
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.45f))
+                .clickable(onClick = onDismissRequest),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxHeight(0.94f)
+                    .clickable(enabled = false) {}, // Prevent dismiss when tapping dialog content
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                color = Color(0xFFFBFDFB)
             ) {
-                // Location Input & GPS Auto-Fetch
-                if (locationPredictionEnabled) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = locationName,
-                            onValueChange = { locationName = it },
-                            label = { Text(if (isZh) "GPS 消費地點 / 店名" else "GPS Location / Merchant") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Place,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            trailingIcon = {
-                                IconButton(
-                                    onClick = {
-                                        if (GpsLocationUtils.hasLocationPermission(context)) {
-                                            GpsLocationUtils.getCurrentGpsLocationName(context) { gpsName ->
-                                                if (gpsName.isNotBlank()) locationName = gpsName
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    // 1. Top Bar: [✕ 記一筆] --- [清除] [儲存]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onDismissRequest,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "關閉",
+                                tint = Color(0xFF1E293B)
+                            )
+                        }
+
+                        Text(
+                            text = if (initialTransaction == null) "記一筆" else "編輯紀錄",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A),
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // 清除按鈕
+                        TextButton(
+                            onClick = {
+                                expression = ""
+                                note = ""
+                            }
+                        ) {
+                            Text(
+                                text = "清除",
+                                color = Color(0xFF475569),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        // 儲存按鈕 (深綠膠囊按鈕)
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF184E38),
+                            modifier = Modifier
+                                .padding(start = 4.dp)
+                                .clickable { doSave(false) }
+                        ) {
+                            Text(
+                                text = "儲存",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
+                            )
+                        }
+                    }
+
+                    // 2. Type Selector Tabs (支出 / 收入 / 轉帳)
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFFF1F5F2),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(3.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            val tabs = listOf(
+                                Triple("EXPENSE", "支出", Icons.AutoMirrored.Filled.TrendingDown),
+                                Triple("INCOME", "收入", Icons.AutoMirrored.Filled.TrendingUp),
+                                Triple("TRANSFER", "轉帳", Icons.Default.SwapHoriz)
+                            )
+                            tabs.forEach { (typeKey, title, icon) ->
+                                val isSelected = selectedTypeTab == typeKey
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (isSelected) Color(0xFF184E38) else Color.Transparent,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            selectedTypeTab = typeKey
+                                            if (typeKey == "INCOME") {
+                                                category = defaultIncomeCategories.first()
+                                            } else if (typeKey == "EXPENSE") {
+                                                category = defaultExpenseCategories.first()
                                             }
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = title,
+                                            tint = if (isSelected) Color.White else Color(0xFF475569),
+                                            modifier = Modifier.size(17.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = title,
+                                            color = if (isSelected) Color.White else Color(0xFF475569),
+                                            fontSize = 14.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Expression Preview & Big Amount Display
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Formula expression preview (e.g. "150 + 30")
+                        val hasFormula = expression.contains("+") || expression.contains("-") ||
+                                expression.contains("×") || expression.contains("÷")
+                        val formattedExpression = remember(expression) {
+                            expression
+                                .replace("+", " + ")
+                                .replace("-", " - ")
+                                .replace("×", " × ")
+                                .replace("÷", " ÷ ")
+                        }
+                        Text(
+                            text = if (hasFormula) formattedExpression else " ",
+                            fontSize = 13.sp,
+                            color = Color(0xFF64748B),
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        // Big Amount with Currency and Animated Cursor
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "NT$",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F766E),
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                            Text(
+                                text = displayAmountString,
+                                fontSize = 38.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF0F172A),
+                                fontFamily = FontFamily.SansSerif
+                            )
+                            // Animated vertical cursor bar
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 4.dp)
+                                    .width(2.5.dp)
+                                    .height(30.dp)
+                                    .alpha(cursorAlpha)
+                                    .background(Color(0xFF0F766E))
+                            )
+                        }
+                    }
+
+                    // 4. Quick Info Pills Row: [🍴 類別] [💳 帳戶] [📅 日期]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Category Pill (Mint green background)
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFD1FAE5),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = getCategoryIcon(category),
+                                    contentDescription = category,
+                                    tint = Color(0xFF065F46),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (category == "餐飲") "餐飲美食" else category,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF065F46),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        // Account Pill (White with subtle border)
+                        Box(modifier = Modifier.weight(1.3f)) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showAccountMenu = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CreditCard,
+                                        contentDescription = "帳戶",
+                                        tint = Color(0xFF475569),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = accountName,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF334155),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showAccountMenu,
+                                onDismissRequest = { showAccountMenu = false }
+                            ) {
+                                defaultAccounts.forEach { acc ->
+                                    DropdownMenuItem(
+                                        text = { Text(acc, fontSize = 13.sp) },
+                                        onClick = {
+                                            accountName = acc
+                                            showAccountMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Date Pill (White with subtle border)
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showDatePicker = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "日期",
+                                    tint = Color(0xFF475569),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = dateDisplay,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF334155),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    // 5. Category Selection Grid (消費類別)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (selectedTypeTab == "INCOME") "收入類別" else "消費類別",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF334155)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { showCustomCategoryDialog = true }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "自訂類別",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "自訂類別",
+                                fontSize = 12.sp,
+                                color = Color(0xFF64748B)
+                            )
+                        }
+                    }
+
+                    // 4x2 Category Grid
+                    val currentCategories = if (selectedTypeTab == "INCOME") defaultIncomeCategories else defaultExpenseCategories
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val row1 = currentCategories.take(4)
+                        val row2 = currentCategories.drop(4).take(4)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            row1.forEach { cat ->
+                                CategoryGridItem(
+                                    name = cat,
+                                    isSelected = category == cat,
+                                    onClick = {
+                                        if (cat == "更多") {
+                                            showCustomCategoryDialog = true
                                         } else {
-                                            permissionLauncher.launch(
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                                )
+                                            category = cat
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            row2.forEach { cat ->
+                                CategoryGridItem(
+                                    name = cat,
+                                    isSelected = category == cat,
+                                    onClick = {
+                                        if (cat == "更多") {
+                                            showCustomCategoryDialog = true
+                                        } else {
+                                            category = cat
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // 6. Note and Sub-category Tags Card
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFF1F5F2),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Note input line: ✏️ [日式豬排定食套餐] 🎤
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "備註",
+                                    tint = Color(0xFF64748B),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(modifier = Modifier.weight(1f)) {
+                                    if (note.isEmpty()) {
+                                        Text(
+                                            text = "日式豬排定食套餐",
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF94A3B8)
+                                        )
+                                    }
+                                    BasicTextField(
+                                        value = note,
+                                        onValueChange = { note = it },
+                                        textStyle = TextStyle(
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF0F172A),
+                                            fontWeight = FontWeight.Medium
+                                        ),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "語音輸入",
+                                    tint = Color(0xFF64748B),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            // Quick Subcategory Tags & Checkbox Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    currentSubs.take(3).forEach { sub ->
+                                        val tagText = "#$sub"
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFE2E8F0),
+                                            modifier = Modifier.clickable {
+                                                note = if (note.contains(sub)) {
+                                                    note.replace("#$sub", "").trim()
+                                                } else {
+                                                    if (note.isBlank()) tagText else "$note $tagText"
+                                                }
+                                            }
+                                        ) {
+                                            Text(
+                                                text = tagText,
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF334155),
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                             )
                                         }
                                     }
+                                }
+
+                                // 不計入預算 Checkbox
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable { excludeFromBudget = !excludeFromBudget }
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MyLocation,
-                                        contentDescription = "GPS 定位",
-                                        tint = MaterialTheme.colorScheme.primary
+                                    Text(
+                                        text = "不計入預算",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF475569)
+                                    )
+                                    Checkbox(
+                                        checked = excludeFromBudget,
+                                        onCheckedChange = { excludeFromBudget = it },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = Color(0xFF184E38)
+                                        ),
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        // Location Quick Chips
-                        val displayLocs = (recentLocations + defaultLocations).distinct().take(5)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            displayLocs.forEach { loc ->
-                                FilterChip(
-                                    selected = locationName == loc,
-                                    onClick = {
-                                        locationName = if (locationName == loc) "" else loc
-                                    },
-                                    label = { Text(loc, fontSize = 11.sp) }
-                                )
                             }
                         }
+                    }
 
-                        // Prediction Badge Chip based on GPS Location
-                        if (estimate.second > 0) {
-                            val avgFormatted = String.format(Locale.getDefault(), "%,.0f", estimate.first)
-                            val estText = if (isZh)
-                                "🔮 預估消費: $$avgFormatted (點擊自動填入，共 ${estimate.second} 次歷史紀錄)"
-                            else
-                                "🔮 Est. Spend: $$avgFormatted (Tap to fill, ${estimate.second} visits)"
+                    // 7. Built-in Keypad (4x4 Calculator Grid)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val keypadRows = listOf(
+                            listOf("7", "8", "9", "÷"),
+                            listOf("4", "5", "6", "×"),
+                            listOf("1", "2", "3", "-"),
+                            listOf(".", "0", "⌫", "+")
+                        )
 
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
+                        keypadRows.forEach { rowKeys ->
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        amountText = if (estimate.first % 1.0 == 0.0) estimate.first.toInt().toString() else estimate.first.toString()
-                                        amountError = false
-                                    }
+                                    .weight(1f),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = estText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                                rowKeys.forEach { key ->
+                                    val isOp = key in listOf("÷", "×", "-", "+")
+                                    val isBack = key == "⌫"
 
-                // Amount Text Field
-                OutlinedTextField(
-                    value = amountText,
-                    onValueChange = {
-                        amountText = it
-                        amountError = false
-                    },
-                    label = { Text(AppStrings.get("expense_amount", language)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isError = amountError,
-                    supportingText = if (amountError) {
-                        { Text(if (language == AppLanguage.ZH) "請輸入有效的金額" else "Please enter a valid amount", color = MaterialTheme.colorScheme.error) }
-                    } else null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Date & Time Selection Section
-                Text(AppStrings.get("select_date", language), style = MaterialTheme.typography.labelMedium)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Date Box (Left - Expanded weight 1.35f)
-                    OutlinedCard(
-                        onClick = { showDatePicker = true },
-                        modifier = Modifier.weight(1.35f)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = AppStrings.get("select_date", language),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = formattedDate,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // Time Box (Right - Compact weight 0.85f)
-                    OutlinedCard(
-                        onClick = {
-                            val cal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
-                            val currentHour = cal.get(Calendar.HOUR_OF_DAY)
-                            val currentMinute = cal.get(Calendar.MINUTE)
-                            TimePickerDialog(
-                                context,
-                                { _, hourOfDay, minute ->
-                                    val updatedCal = Calendar.getInstance().apply {
-                                        timeInMillis = selectedDateMillis
-                                        set(Calendar.HOUR_OF_DAY, hourOfDay)
-                                        set(Calendar.MINUTE, minute)
-                                    }
-                                    selectedDateMillis = updatedCal.timeInMillis
-                                },
-                                currentHour,
-                                currentMinute,
-                                true
-                            ).show()
-                        },
-                        modifier = Modifier.weight(0.85f)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccessTime,
-                                contentDescription = if (isZh) "選擇時間" else "Select Time",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = formattedTime,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // Transaction Type Segmented Button
-                if (isIncomeTrackingEnabled) {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        SegmentedButton(
-                            selected = transactionType == TransactionType.EXPENSE,
-                            onClick = {
-                                transactionType = TransactionType.EXPENSE
-                                category = defaultExpenseCategories.first()
-                            },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                        ) {
-                            Text(if (isZh) "💸 支出" else "Expense")
-                        }
-                        SegmentedButton(
-                            selected = transactionType == TransactionType.INCOME,
-                            onClick = {
-                                transactionType = TransactionType.INCOME
-                                category = defaultIncomeCategories.first()
-                            },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                        ) {
-                            Text(if (isZh) "💵 收入" else "Income")
-                        }
-                    }
-                }
-
-                // Multi Account Selection
-                if (isMultiAccountEnabled) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(if (isZh) "支付 / 存入帳戶" else "Account", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            defaultAccounts.forEach { acc ->
-                                val iconStr = when (acc) {
-                                    "現金" -> "💵 "
-                                    "信用卡" -> "💳 "
-                                    "銀行帳戶" -> "🏦 "
-                                    else -> "📱 "
-                                }
-                                FilterChip(
-                                    selected = accountName == acc,
-                                    onClick = { accountName = acc },
-                                    label = { Text(iconStr + acc) }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Category Selection Chips
-                val currentCategories = if (transactionType == TransactionType.INCOME) defaultIncomeCategories else defaultExpenseCategories
-                Text(AppStrings.get("select_category", language), style = MaterialTheme.typography.labelMedium)
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    currentCategories.forEach { cat ->
-                        val catLabel = AppStrings.getCategoryName(cat, language)
-                        FilterChip(
-                            selected = category == cat,
-                            onClick = { category = cat },
-                            label = { Text(catLabel) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = getCategoryIcon(cat),
-                                    contentDescription = catLabel,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        )
-                    }
-                }
-
-                // Sub-category Selection for ALL Categories
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = if (isZh) "選擇「$category」細項" else "Subcategory for ${AppStrings.getCategoryName(category, language)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        currentSubs.forEach { sub ->
-                            val chipLabel = when (sub) {
-                                "洗衣" -> AppStrings.get("laundry_chip", language)
-                                "烘衣" -> AppStrings.get("dryer_chip", language)
-                                else -> AppStrings.getSubCategoryName(sub, language)
-                            }
-                            FilterChip(
-                                selected = selectedSubCategory == sub,
-                                onClick = {
-                                    if (selectedSubCategory == sub) {
-                                        selectedSubCategory = null
-                                    } else {
-                                        selectedSubCategory = sub
-                                        if (sub == "洗衣" || sub == "烘衣") {
-                                            amountText = "20"
-                                            amountError = false
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = when {
+                                            isOp -> Color(0xFFE2EFE7)
+                                            else -> Color(0xFFF1F5F2)
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .clickable {
+                                                when (key) {
+                                                    "⌫" -> {
+                                                        if (expression.isNotEmpty()) {
+                                                            expression = expression.dropLast(1)
+                                                        }
+                                                    }
+                                                    in listOf("÷", "×", "-", "+") -> {
+                                                        if (expression.isNotEmpty()) {
+                                                            val last = expression.last()
+                                                            if (last in listOf('+', '-', '×', '÷')) {
+                                                                expression = expression.dropLast(1) + key
+                                                            } else {
+                                                                expression += key
+                                                            }
+                                                        }
+                                                    }
+                                                    "." -> {
+                                                        val lastToken = expression.split('+', '-', '×', '÷').lastOrNull() ?: ""
+                                                        if (!lastToken.contains('.')) {
+                                                            expression = if (expression.isEmpty()) "0." else "$expression."
+                                                        }
+                                                    }
+                                                    else -> {
+                                                        // Digit
+                                                        expression += key
+                                                    }
+                                                }
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (isBack) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.Backspace,
+                                                    contentDescription = "刪除",
+                                                    tint = Color(0xFF1E293B),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = key,
+                                                    fontSize = if (isOp) 22.sp else 20.sp,
+                                                    fontWeight = if (isOp) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isOp) Color(0xFF0F766E) else Color(0xFF0F172A)
+                                                )
+                                            }
                                         }
                                     }
-                                },
-                                label = { Text(chipLabel) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            )
-                        }
-
-                        // ➕ Add Custom Subcategory Chip
-                        FilterChip(
-                            selected = false,
-                            onClick = { showAddSubDialog = true },
-                            label = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "新增細項",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text(if (isZh) "新增" else "Add")
                                 }
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        )
-                    }
-                }
-
-                // Note Text Field
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(AppStrings.get("note_optional", language)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val amount = amountText.toDoubleOrNull()
-                    if (amount == null || amount <= 0) {
-                        amountError = true
-                    } else {
-                        var finalNote = note.trim()
-                        if (selectedSubCategory != null) {
-                            if (!finalNote.contains(selectedSubCategory!!)) {
-                                finalNote = if (finalNote.isBlank()) selectedSubCategory!! else "${selectedSubCategory!!} • $finalNote"
                             }
                         }
-                        onConfirm(amount, category, finalNote, selectedDateMillis, locationName.trim(), false, accountName, transactionType)
-                        onDismissRequest()
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 8. Bottom Dual Action Bar: [⊕ 再記一筆] [✓ 完成儲存]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left: ⊕ 再記一筆
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFF1F5F2),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { doSave(true) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddCircleOutline,
+                                    contentDescription = "再記一筆",
+                                    tint = Color(0xFF1E293B),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "再記一筆",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E293B)
+                                )
+                            }
+                        }
+
+                        // Right: ✓ 完成儲存
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF184E38),
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .clickable { doSave(false) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "完成儲存",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "完成儲存",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
                 }
-            ) {
-                Text(if (initialTransaction == null) AppStrings.get("save", language) else AppStrings.get("update_record", language))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(AppStrings.get("cancel", language))
             }
         }
-    )
+    }
 
+    // Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
         DatePickerDialog(
@@ -589,12 +987,12 @@ fun AddTransactionDialog(
                         showDatePicker = false
                     }
                 ) {
-                    Text(AppStrings.get("confirm", language))
+                    Text("確定")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text(AppStrings.get("cancel", language))
+                    Text("取消")
                 }
             }
         ) {
@@ -602,17 +1000,18 @@ fun AddTransactionDialog(
         }
     }
 
-    if (showAddSubDialog) {
+    // Custom Category / Subcategory Dialog
+    if (showCustomCategoryDialog) {
         AlertDialog(
-            onDismissRequest = { showAddSubDialog = false },
+            onDismissRequest = { showCustomCategoryDialog = false },
             title = {
-                Text(if (isZh) "新增「$category」次細項" else "Add ${AppStrings.getCategoryName(category, language)} Subcategory")
+                Text("新增「$category」次細項", fontWeight = FontWeight.Bold)
             },
             text = {
                 OutlinedTextField(
-                    value = customSubInput,
-                    onValueChange = { customSubInput = it },
-                    label = { Text(if (isZh) "細項名稱 (如: 外送, 健身房...)" else "Subcategory Name") },
+                    value = customCategoryInput,
+                    onValueChange = { customCategoryInput = it },
+                    label = { Text("細項名稱 (如: 外送, 咖啡, 甜點...)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -620,24 +1019,59 @@ fun AddTransactionDialog(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val trimmed = customSubInput.trim()
+                        val trimmed = customCategoryInput.trim()
                         if (trimmed.isNotBlank()) {
                             onAddCustomSubCategory(category, trimmed)
-                            selectedSubCategory = trimmed
                             customSubVersion++
-                            customSubInput = ""
-                            showAddSubDialog = false
+                            customCategoryInput = ""
+                            showCustomCategoryDialog = false
                         }
                     }
                 ) {
-                    Text(AppStrings.get("confirm", language))
+                    Text("新增")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddSubDialog = false }) {
-                    Text(AppStrings.get("cancel", language))
+                TextButton(onClick = { showCustomCategoryDialog = false }) {
+                    Text("取消")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun CategoryGridItem(
+    name: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(64.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(if (isSelected) Color(0xFF184E38) else Color(0xFFF1F5F2)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = getCategoryIcon(name),
+                contentDescription = name,
+                tint = if (isSelected) Color.White else Color(0xFF1E293B),
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = name,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) Color(0xFF184E38) else Color(0xFF475569)
         )
     }
 }
