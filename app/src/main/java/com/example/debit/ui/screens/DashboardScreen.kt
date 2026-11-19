@@ -1205,7 +1205,7 @@ fun DashboardScreen(
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = if (lang == AppLanguage.ZH) "小金庫儲蓄與目標規劃" else "Savings Vault Planning",
+                                            text = if (lang == AppLanguage.ZH) "資金儲蓄與目標規劃" else "Savings & Goals Planning",
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White
@@ -1219,7 +1219,7 @@ fun DashboardScreen(
                                     ) {
                                         Column {
                                             Text(
-                                                text = if (lang == AppLanguage.ZH) "本月剩餘可用金庫" else "Remaining Vault",
+                                                text = if (lang == AppLanguage.ZH) "本月剩餘可用資金" else "Remaining Funds",
                                                 fontSize = 11.sp,
                                                 color = Color(0xFF94A3B8)
                                             )
@@ -1234,7 +1234,7 @@ fun DashboardScreen(
 
                                         Column(horizontalAlignment = Alignment.End) {
                                             Text(
-                                                text = if (lang == AppLanguage.ZH) "金庫健康度" else "Vault Health",
+                                                text = if (lang == AppLanguage.ZH) "資金健康度" else "Fund Health",
                                                 fontSize = 11.sp,
                                                 color = Color(0xFF94A3B8)
                                             )
@@ -1260,9 +1260,9 @@ fun DashboardScreen(
 
                                     Text(
                                         text = if (lang == AppLanguage.ZH)
-                                            "💡 維持規律的記帳與日均配額紀律，每日未花費的預算將自動滾入金庫，累積為可觀的財富自由基金。"
+                                            "💡 維持規律的記帳與日均配額紀律，每日未花費的預算將自動累積為剩餘資金，累積為可觀的財富自由基金。"
                                         else
-                                            "💡 Daily unspent allowances roll into your monthly vault to build wealth over time.",
+                                            "💡 Daily unspent allowances roll into your monthly savings to build wealth over time.",
                                         fontSize = 11.sp,
                                         color = Color(0xFF64748B),
                                         lineHeight = 16.sp
@@ -2022,7 +2022,7 @@ fun BudgetOverviewCard(
                 }
             }
 
-            // Clean Divider & Pure Split Layout (已花費 / 剩餘金庫 / 日均配額)
+            // Clean Divider & Pure Split Layout (已花費 / 剩餘資金 / 日均配額)
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 thickness = 1.dp
@@ -2033,10 +2033,10 @@ fun BudgetOverviewCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Column 1: Remaining Vault
+                // Column 1: Remaining Funds
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = if (isZh) "剩餘金庫" else "Remaining Vault",
+                        text = if (isZh) "剩餘資金" else "Remaining Funds",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
