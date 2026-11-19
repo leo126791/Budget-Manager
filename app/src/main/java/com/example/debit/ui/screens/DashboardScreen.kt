@@ -1516,23 +1516,24 @@ fun TransactionItem(
 
     Card(
         modifier = modifierWithDrag,
-        shape = OrganicShapeMedium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Surface(
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(14.dp),
                     color = iconBgColor,
                     modifier = Modifier.size(44.dp)
                 ) {
@@ -1541,7 +1542,7 @@ fun TransactionItem(
                             imageVector = getCategoryIcon(transaction.category),
                             contentDescription = transaction.category,
                             tint = iconTintColor,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -1555,13 +1556,14 @@ fun TransactionItem(
                         AppStrings.getSubCategoryName(part, language)
                     }
 
-                    Text(
-                        text = localizedCategory,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = localizedCategory,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     val noteSubtitle = if (localizedNote.isNotBlank()) "$localizedNote • $timeStr" else timeStr
                     Text(
                         text = noteSubtitle,
@@ -1577,12 +1579,14 @@ fun TransactionItem(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = "$amountPrefix$${String.format(Locale.getDefault(), "%,.0f", transaction.amount)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    ),
                     color = amountColor
                 )
 
@@ -1636,12 +1640,13 @@ fun BudgetOverviewCard(
         modifier = Modifier
             .fillMaxWidth()
             .bouncyClickable { onOpenMonthlyBreakdown() },
-        shape = OrganicShapeLarge,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -1649,7 +1654,7 @@ fun BudgetOverviewCard(
             ) { page ->
                 when (page) {
                     0 -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1659,47 +1664,80 @@ fun BudgetOverviewCard(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AccountBalanceWallet,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.AccountBalanceWallet,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
                                     Text(
                                         text = AppStrings.get("vault_overview", language),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                                ) {
+                                    Text(
+                                        text = "${(progress * 100).toInt()}% 已用",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
                             ) {
-                                Column {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
                                         text = AppStrings.get("spent_this_month", language),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Text(
-                                        text = "$${String.format(Locale.getDefault(), "%,.0f", totalExpense)}",
-                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            text = "$${String.format(Locale.getDefault(), "%,.0f", totalExpense)}",
+                                            style = MaterialTheme.typography.headlineLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 32.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "TWD",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
                                 }
 
-                                Column(horizontalAlignment = Alignment.End) {
+                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
                                         text = AppStrings.get("remaining_vault", language),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     val remColor = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                     Text(
                                         text = "$${String.format(Locale.getDefault(), "%,.0f", remainingBudget)}",
-                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                         color = remColor
                                     )
                                 }
@@ -1715,7 +1753,8 @@ fun BudgetOverviewCard(
                                 progress = { progress.coerceIn(0f, 1f) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(10.dp),
+                                    .height(10.dp)
+                                    .clip(CircleShape),
                                 color = barColor,
                                 trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
@@ -1726,9 +1765,9 @@ fun BudgetOverviewCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "${AppStrings.get("vault_usage", language)}: ${(progress * 100).toInt()}%",
+                                    text = if (isOverBudget) "⚠️ 已超出預算限額" else "目標控管中",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isOverBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 Text(
@@ -1742,7 +1781,7 @@ fun BudgetOverviewCard(
                     }
 
                     1 -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1752,47 +1791,80 @@ fun BudgetOverviewCard(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Today,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.Today,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
                                     Text(
                                         text = if (isZh) "每日配額概況" else "Daily Budget Status",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                                ) {
+                                    Text(
+                                        text = if (isZh) "剩餘 $remainingDays 天" else "$remainingDays days left",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
                             ) {
-                                Column {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
-                                        text = if (isZh) "目前已使用" else "Spent Today",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        text = if (isZh) "今日已使用" else "Spent Today",
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Text(
-                                        text = "$${String.format(Locale.getDefault(), "%,.0f", todayExpense)}",
-                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            text = "$${String.format(Locale.getDefault(), "%,.0f", todayExpense)}",
+                                            style = MaterialTheme.typography.headlineLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 32.sp
+                                            ),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "TWD",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
                                 }
 
-                                Column(horizontalAlignment = Alignment.End) {
+                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
-                                        text = if (isZh) "今日預估尚可支出" else "Today's Remaining",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        text = if (isZh) "今日剩餘預估" else "Today's Remaining",
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     val todayRemColor = if (todayEstimatedRemaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
                                     Text(
                                         text = "$${String.format(Locale.getDefault(), "%,.0f", todayEstimatedRemaining)}",
-                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                         color = todayRemColor
                                     )
                                 }
@@ -1805,7 +1877,8 @@ fun BudgetOverviewCard(
                                 progress = { todayProgress },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(10.dp),
+                                    .height(10.dp)
+                                    .clip(CircleShape),
                                 color = todayBarColor,
                                 trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             )
@@ -1816,13 +1889,13 @@ fun BudgetOverviewCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (isZh) "本月還剩 $remainingDays 天" else "$remainingDays days left",
+                                    text = if (todayEstimatedRemaining < 0) "⚠️ 今日支出已超標" else "今日配額充裕",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (todayEstimatedRemaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 Text(
-                                    text = if (isZh) "每日預估可用: $${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/天" else "Daily est: $${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/day",
+                                    text = if (isZh) "日均上限: $${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/天" else "Daily est: $${String.format(Locale.getDefault(), "%,.0f", dailyEstimatedUsable)}/day",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Bold
